@@ -261,8 +261,6 @@ main {
   font-weight: 700;
 }
 
-<<<<<<< Updated upstream
-=======
 .dashboard__actions {
   display: flex;
   flex-wrap: wrap;
@@ -308,7 +306,6 @@ main {
   font-size: 1rem;
 }
 
->>>>>>> Stashed changes
 @media (max-width: 900px) {
   .dashboard__hero,
   .dashboard__grid,

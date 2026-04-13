@@ -17,8 +17,6 @@ export function DashboardShell({
   spotifyConfigured,
   spotifyAuthenticated,
 }: DashboardShellProps) {
-<<<<<<< Updated upstream
-=======
   const [state, setState] = useState({
     data,
     spotifyConfigured,
@@ -99,7 +97,6 @@ export function DashboardShell({
   }, [state.data.generatedAt]);
   const sourceLabel = state.source === "spotify" ? "Spotify 实时数据" : "样例数据";
 
->>>>>>> Stashed changes
   return (
     <section className="dashboard">
       <div className="dashboard__hero">
@@ -125,11 +122,6 @@ export function DashboardShell({
           >
             {statusText}
           </span>
-<<<<<<< Updated upstream
-          <span className="dashboard__status-label">
-            Start by wiring auth callbacks or replacing the mock data source in
-            `src/lib/mock-dashboard.ts`.
-=======
           <div className="dashboard__actions">
             <a className="dashboard__button" href="/api/auth/spotify">
               连接 Spotify
@@ -145,7 +137,6 @@ export function DashboardShell({
           </div>
           <span className="dashboard__status-label">
             数据源：{sourceLabel} · 更新时间：{generatedAtLabel}
->>>>>>> Stashed changes
           </span>
           {state.spotifyAuthenticated && state.source === "spotify" ? (
             <span className="dashboard__status-label">

@@ -1,6 +1,3 @@
-<<<<<<< Updated upstream
-type SpotifyConfig = {
-=======
 import { createHash, randomBytes, timingSafeEqual } from "crypto";
 
 export const SPOTIFY_AUTHORIZE_URL = "https://accounts.spotify.com/authorize";
@@ -17,15 +14,6 @@ const DEFAULT_SCOPES = [
 
 type SpotifyConfigOptions = {
   strict?: boolean;
-};
-
-export type SpotifyConfig = {
->>>>>>> Stashed changes
-  clientId: string;
-  hasClientSecret: boolean;
-  appUrl: string;
-  isConfigured: boolean;
-  redirectUri: string;
 };
 
 export type SpotifyConfig = {

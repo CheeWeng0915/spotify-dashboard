@@ -1,15 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getMockDashboardData } from "@/lib/mock-dashboard";
-<<<<<<< Updated upstream
-import { isSpotifyConfigured } from "@/lib/spotify";
-
-export function GET() {
-  return NextResponse.json({
-    data: getMockDashboardData(),
-    spotifyConfigured: isSpotifyConfigured(),
-  });
-=======
 import {
   getCurrentSpotifyProfile,
   getCurrentUserRecentlyPlayed,
@@ -149,5 +140,4 @@ export async function GET() {
 
     return response;
   }
->>>>>>> Stashed changes
 }
