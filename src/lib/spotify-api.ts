@@ -26,8 +26,10 @@ export type SpotifyTopTracksResponse = {
   items: Array<{
     id: string;
     name: string;
+    duration_ms: number;
     popularity: number;
     album: {
+      id?: string;
       name: string;
     };
     artists: Array<{
@@ -35,6 +37,33 @@ export type SpotifyTopTracksResponse = {
     }>;
   }>;
 };
+
+export type SpotifyRecentlyPlayedItem = {
+  played_at: string;
+  track: {
+    id: string;
+    name: string;
+    duration_ms: number;
+    album: {
+      id?: string;
+      name: string;
+    };
+    artists: Array<{
+      name: string;
+    }>;
+  };
+};
+
+export type SpotifyRecentlyPlayedResponse = {
+  items: SpotifyRecentlyPlayedItem[];
+  cursors?: {
+    before?: string;
+    after?: string;
+  };
+  next?: string | null;
+};
+
+export type SpotifyTimeRange = "short_term" | "medium_term" | "long_term";
 
 export class SpotifyApiError extends Error {
   status: number;
@@ -122,9 +151,39 @@ export function getCurrentSpotifyProfile(accessToken: string) {
   return spotifyFetch<SpotifyProfile>("/me", accessToken);
 }
 
-export function getCurrentUserTopTracks(accessToken: string) {
+export function getCurrentUserTopTracks(
+  accessToken: string,
+  timeRange: SpotifyTimeRange = "short_term",
+  limit = 5,
+) {
+  const query = new URLSearchParams({
+    limit: String(limit),
+    time_range: timeRange,
+  });
+
   return spotifyFetch<SpotifyTopTracksResponse>(
-    "/me/top/tracks?limit=5&time_range=short_term",
+    `/me/top/tracks?${query.toString()}`,
+    accessToken,
+  );
+}
+
+export function getCurrentUserRecentlyPlayed(
+  accessToken: string,
+  options: {
+    limit?: number;
+    before?: number;
+  } = {},
+) {
+  const query = new URLSearchParams({
+    limit: String(options.limit ?? 50),
+  });
+
+  if (typeof options.before === "number") {
+    query.set("before", String(Math.max(0, Math.floor(options.before))));
+  }
+
+  return spotifyFetch<SpotifyRecentlyPlayedResponse>(
+    `/me/player/recently-played?${query.toString()}`,
     accessToken,
   );
 }
