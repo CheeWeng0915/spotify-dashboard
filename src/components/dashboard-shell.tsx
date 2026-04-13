@@ -5,12 +5,20 @@ import type { DashboardData } from "@/types/dashboard";
 type DashboardShellProps = {
   data: DashboardData;
   spotifyConfigured: boolean;
+  spotifyAuthenticated: boolean;
 };
 
 export function DashboardShell({
   data,
   spotifyConfigured,
+  spotifyAuthenticated,
 }: DashboardShellProps) {
+  const statusText = spotifyAuthenticated
+    ? "Spotify account connected"
+    : spotifyConfigured
+      ? "Spotify app configured"
+      : "Add Spotify env vars to enable live data";
+
   return (
     <section className="dashboard">
       <div className="dashboard__hero">
@@ -35,13 +43,24 @@ export function DashboardShell({
               spotifyConfigured ? "" : " dashboard__status-chip--off"
             }`}
           >
-            {spotifyConfigured
-              ? "Spotify credentials detected"
-              : "Add Spotify env vars to enable live data"}
+            {statusText}
           </span>
+          <div className="dashboard__actions">
+            <a className="dashboard__button" href="/api/auth/spotify">
+              Connect Spotify
+            </a>
+            {spotifyAuthenticated ? (
+              <a
+                className="dashboard__button dashboard__button--secondary"
+                href="/api/auth/logout"
+              >
+                Disconnect
+              </a>
+            ) : null}
+          </div>
           <span className="dashboard__status-label">
-            Start by wiring auth callbacks or replacing the mock data source in
-            `src/lib/mock-dashboard.ts`.
+            Live dashboard data loads through `/api/dashboard` after a Spotify
+            account is connected.
           </span>
         </aside>
       </div>
