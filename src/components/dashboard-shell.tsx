@@ -9,11 +9,13 @@ import type { DashboardData } from "@/types/dashboard";
 type DashboardShellProps = {
   data: DashboardData;
   spotifyConfigured: boolean;
+  spotifyAuthenticated: boolean;
 };
 
 export function DashboardShell({
   data,
   spotifyConfigured,
+  spotifyAuthenticated,
 }: DashboardShellProps) {
 <<<<<<< Updated upstream
 =======
@@ -121,9 +123,7 @@ export function DashboardShell({
               state.spotifyConfigured ? "" : " dashboard__status-chip--off"
             }`}
           >
-            {spotifyConfigured
-              ? "Spotify credentials detected"
-              : "Add Spotify env vars to enable live data"}
+            {statusText}
           </span>
 <<<<<<< Updated upstream
           <span className="dashboard__status-label">
