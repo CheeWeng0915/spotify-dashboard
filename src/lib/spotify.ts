@@ -89,16 +89,14 @@ export function createCodeChallenge(codeVerifier: string) {
 export function createSpotifyAuthorizeUrl(params: {
   state: string;
   codeChallenge: string;
-  redirectUri?: string;
 }) {
   const config = getSpotifyConfig({ strict: true });
   const authorizeUrl = new URL(SPOTIFY_AUTHORIZE_URL);
-  const redirectUri = params.redirectUri ?? config.redirectUri;
 
   authorizeUrl.search = new URLSearchParams({
     client_id: config.clientId,
     response_type: "code",
-    redirect_uri: redirectUri,
+    redirect_uri: config.redirectUri,
     scope: config.scopes.join(" "),
     state: params.state,
     code_challenge_method: "S256",

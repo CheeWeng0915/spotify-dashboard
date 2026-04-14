@@ -12,11 +12,10 @@ import type { SpotifyRecentlyPlayedItem } from "@/lib/spotify-api";
 import { createDashboardDataFromSpotify } from "@/lib/spotify-dashboard";
 import { getSpotifyConfig } from "@/lib/spotify";
 import {
-  getSpotifySessionCookieMaxAge,
   SPOTIFY_SESSION_COOKIE,
+  SPOTIFY_SESSION_COOKIE_MAX_AGE,
   createSpotifySession,
   isSpotifySessionExpired,
-  isSpotifySessionHardExpired,
   sealSpotifySession,
   unsealSpotifySession,
 } from "@/lib/spotify-session";
@@ -65,19 +64,13 @@ export async function GET() {
   const sealedSession = cookieStore.get(SPOTIFY_SESSION_COOKIE)?.value;
   const session = sealedSession ? unsealSpotifySession(sealedSession) : null;
 
-  if (!session || isSpotifySessionHardExpired(session)) {
-    const response = NextResponse.json({
+  if (!session) {
+    return NextResponse.json({
       data: getMockDashboardData(),
       spotifyConfigured: config.isConfigured,
       spotifyAuthenticated: false,
       source: "mock",
     });
-
-    if (session) {
-      response.cookies.delete(SPOTIFY_SESSION_COOKIE);
-    }
-
-    return response;
   }
 
   try {
@@ -92,7 +85,6 @@ export async function GET() {
       activeSession = createSpotifySession(
         await refreshSpotifyAccessToken(session.refreshToken),
         session.refreshToken,
-        session.sessionExpiresAt,
       );
       refreshed = true;
     }
@@ -139,14 +131,12 @@ export async function GET() {
     });
 
     if (refreshed) {
-      const maxAge = getSpotifySessionCookieMaxAge(activeSession);
-
       response.cookies.set(
         SPOTIFY_SESSION_COOKIE,
         sealSpotifySession(activeSession),
         {
           httpOnly: true,
-          maxAge,
+          maxAge: SPOTIFY_SESSION_COOKIE_MAX_AGE,
           path: "/",
           sameSite: "lax",
           secure: process.env.NODE_ENV === "production",
