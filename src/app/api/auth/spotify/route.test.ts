@@ -47,4 +47,24 @@ describe("/api/auth/spotify", () => {
     expect(setCookie).toContain(SPOTIFY_AUTH_STATE_COOKIE);
     expect(setCookie).toContain(SPOTIFY_CODE_VERIFIER_COOKIE);
   });
+
+  it("uses forwarded host/proto for callback redirect_uri", () => {
+    setConfiguredEnv();
+
+    const request = new Request(
+      "http://localhost:3000/api/auth/spotify?next=%2Freports%2Fdaily",
+      {
+        headers: {
+          "x-forwarded-host": "my-app.example.dev",
+          "x-forwarded-proto": "https",
+        },
+      },
+    );
+    const response = GET(request);
+    const location = response.headers.get("location");
+
+    expect(location).toContain(
+      encodeURIComponent("https://my-app.example.dev/api/auth/callback/spotify"),
+    );
+  });
 });

@@ -4,6 +4,7 @@ import {
   createCodeChallenge,
   createRandomString,
   createSpotifyAuthorizeUrl,
+  getRequestOrigin,
 } from "@/lib/spotify";
 import {
   SPOTIFY_AUTH_STATE_COOKIE,
@@ -25,7 +26,7 @@ export function GET(request?: Request) {
   try {
     const url = request ? new URL(request.url) : null;
     const nextPath = getSafeRedirectPath(url?.searchParams.get("next") ?? null);
-    const requestOrigin = url?.origin;
+    const requestOrigin = request ? getRequestOrigin(request) : null;
     const callbackRedirectUri = requestOrigin
       ? `${requestOrigin}/api/auth/callback/spotify`
       : undefined;

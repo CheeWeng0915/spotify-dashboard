@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { exchangeSpotifyCodeForToken } from "@/lib/spotify-api";
-import { timingSafeStringEqual } from "@/lib/spotify";
+import { getRequestOrigin, timingSafeStringEqual } from "@/lib/spotify";
 import {
   getSpotifySessionCookieMaxAge,
   SPOTIFY_AUTH_STATE_COOKIE,
@@ -21,12 +21,12 @@ function getSafeRedirectPath(path: string | undefined) {
 }
 
 function createRedirectResponse(
-  requestUrl: URL,
+  requestOrigin: string,
   path: string,
   status: "connected" | "error",
   reason?: string,
 ) {
-  const url = new URL(path, requestUrl.origin);
+  const url = new URL(path, requestOrigin);
   url.searchParams.set("spotify", status);
 
   if (reason) {
@@ -45,6 +45,7 @@ function clearTemporaryCookies(response: NextResponse) {
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
+  const requestOrigin = getRequestOrigin(request);
   const { searchParams } = requestUrl;
   const code = searchParams.get("code");
   const state = searchParams.get("state");
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     const response = createRedirectResponse(
-      requestUrl,
+      requestOrigin,
       "/",
       "error",
       "spotify_denied",
@@ -72,7 +73,7 @@ export async function GET(request: NextRequest) {
 
   if (!code || !state || !expectedState || !codeVerifier) {
     const response = createRedirectResponse(
-      requestUrl,
+      requestOrigin,
       "/",
       "error",
       "missing_oauth_state",
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
 
   if (!timingSafeStringEqual(state, expectedState)) {
     const response = createRedirectResponse(
-      requestUrl,
+      requestOrigin,
       "/",
       "error",
       "invalid_oauth_state",
@@ -101,7 +102,7 @@ export async function GET(request: NextRequest) {
     );
     const session = createSpotifySession(token, undefined, now + 24 * 60 * 60 * 1000);
     const response = createRedirectResponse(
-      requestUrl,
+      requestOrigin,
       postAuthRedirectPath,
       "connected",
     );
@@ -118,7 +119,7 @@ export async function GET(request: NextRequest) {
     return response;
   } catch {
     const response = createRedirectResponse(
-      requestUrl,
+      requestOrigin,
       "/",
       "error",
       "token_exchange_failed",
