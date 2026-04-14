@@ -116,6 +116,7 @@ async function parseSpotifyResponse<T>(response: Response) {
 export async function exchangeSpotifyCodeForToken(
   code: string,
   codeVerifier: string,
+  redirectUri?: string,
 ) {
   const config = getSpotifyConfig({ strict: true });
   const response = await fetch(SPOTIFY_TOKEN_URL, {
@@ -127,7 +128,7 @@ export async function exchangeSpotifyCodeForToken(
       client_id: config.clientId,
       grant_type: "authorization_code",
       code,
-      redirect_uri: config.redirectUri,
+      redirect_uri: redirectUri ?? config.redirectUri,
       code_verifier: codeVerifier,
     }),
   });
