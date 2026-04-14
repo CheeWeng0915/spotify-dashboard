@@ -156,16 +156,12 @@ export async function GET() {
 
     return response;
   } catch {
-    const response = NextResponse.json({
+    return NextResponse.json({
       data: getMockDashboardData(),
       spotifyConfigured: config.isConfigured,
-      spotifyAuthenticated: false,
+      spotifyAuthenticated: true,
       source: "mock",
       error: "spotify_fetch_failed",
     });
-
-    response.cookies.delete(SPOTIFY_SESSION_COOKIE);
-
-    return response;
   }
 }
