@@ -37,6 +37,12 @@ const RECENTLY_PLAYED_PAGE_LIMIT = 50;
 const MAX_RECENTLY_PLAYED_REQUESTS = 20;
 const YEAR_WINDOW_MS = 365 * 24 * 60 * 60 * 1000;
 const TOP_ITEMS_LIMIT = 50;
+const EMPTY_TOP_TRACKS: SpotifyTopTracksResponse = {
+  items: [],
+};
+const EMPTY_TOP_ARTISTS: SpotifyTopArtistsResponse = {
+  items: [],
+};
 
 function createMockPayload(options: {
   spotifyConfigured: boolean;
@@ -245,6 +251,7 @@ export async function GET() {
 
   try {
     const [
+      profile,
       shortTermTopTracks,
       mediumTermTopTracks,
       longTermTopTracks,
@@ -253,6 +260,7 @@ export async function GET() {
       longTermTopArtists,
       recentlyPlayed,
     ] = await Promise.all([
+        getCurrentSpotifyProfile(activeSession.accessToken),
         withSpotifyFallback(
           "top_tracks_short_term",
           getCurrentUserTopTracks(activeSession.accessToken, "short_term", TOP_ITEMS_LIMIT),
