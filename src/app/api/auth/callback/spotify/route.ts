@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { exchangeSpotifyCodeForToken } from "@/lib/spotify-api";
-import { getAppUrl, timingSafeStringEqual } from "@/lib/spotify";
+import { timingSafeStringEqual } from "@/lib/spotify";
 import {
   getSpotifySessionCookieMaxAge,
   SPOTIFY_AUTH_STATE_COOKIE,
@@ -21,11 +21,12 @@ function getSafeRedirectPath(path: string | undefined) {
 }
 
 function createRedirectResponse(
+  requestUrl: URL,
   path: string,
   status: "connected" | "error",
   reason?: string,
 ) {
-  const url = new URL(path, getAppUrl());
+  const url = new URL(path, requestUrl.origin);
   url.searchParams.set("spotify", status);
 
   if (reason) {
@@ -43,7 +44,8 @@ function clearTemporaryCookies(response: NextResponse) {
 }
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
+  const requestUrl = new URL(request.url);
+  const { searchParams } = requestUrl;
   const code = searchParams.get("code");
   const state = searchParams.get("state");
   const error = searchParams.get("error");
@@ -58,19 +60,34 @@ export async function GET(request: NextRequest) {
   const secure = process.env.NODE_ENV === "production";
 
   if (error) {
-    const response = createRedirectResponse("/", "error", "spotify_denied");
+    const response = createRedirectResponse(
+      requestUrl,
+      "/",
+      "error",
+      "spotify_denied",
+    );
     clearTemporaryCookies(response);
     return response;
   }
 
   if (!code || !state || !expectedState || !codeVerifier) {
-    const response = createRedirectResponse("/", "error", "missing_oauth_state");
+    const response = createRedirectResponse(
+      requestUrl,
+      "/",
+      "error",
+      "missing_oauth_state",
+    );
     clearTemporaryCookies(response);
     return response;
   }
 
   if (!timingSafeStringEqual(state, expectedState)) {
-    const response = createRedirectResponse("/", "error", "invalid_oauth_state");
+    const response = createRedirectResponse(
+      requestUrl,
+      "/",
+      "error",
+      "invalid_oauth_state",
+    );
     clearTemporaryCookies(response);
     return response;
   }
@@ -83,7 +100,11 @@ export async function GET(request: NextRequest) {
       callbackRedirectUri,
     );
     const session = createSpotifySession(token, undefined, now + 24 * 60 * 60 * 1000);
-    const response = createRedirectResponse(postAuthRedirectPath, "connected");
+    const response = createRedirectResponse(
+      requestUrl,
+      postAuthRedirectPath,
+      "connected",
+    );
 
     response.cookies.set(SPOTIFY_SESSION_COOKIE, sealSpotifySession(session), {
       httpOnly: true,
@@ -96,7 +117,12 @@ export async function GET(request: NextRequest) {
 
     return response;
   } catch {
-    const response = createRedirectResponse("/", "error", "token_exchange_failed");
+    const response = createRedirectResponse(
+      requestUrl,
+      "/",
+      "error",
+      "token_exchange_failed",
+    );
     clearTemporaryCookies(response);
     return response;
   }
