@@ -11,6 +11,7 @@ export type TopTrack = {
   album: string;
   plays: string;
   duration: string;
+  imageUrl?: string;
 };
 
 export type TopAlbum = {
@@ -18,9 +19,20 @@ export type TopAlbum = {
   artist: string;
   plays: string;
   duration: string;
+  imageUrl?: string;
+};
+
+export type TopArtist = {
+  name: string;
+  plays: string;
+  duration: string;
+  topTrack: string;
+  imageUrl?: string;
 };
 
 export type ListeningPeriod = "daily" | "weekly" | "monthly" | "yearly";
+
+export type LibraryCategory = "artists" | "albums";
 
 export type ListeningReport = {
   period: ListeningPeriod;
@@ -28,11 +40,14 @@ export type ListeningReport = {
   subheading: string;
   metrics: DashboardMetric[];
   topTracks: TopTrack[];
+  topArtists: TopArtist[];
   topAlbums: TopAlbum[];
 };
 
 export type DashboardData = {
   generatedAt: string;
   profileName: string;
+  profileImageUrl?: string;
+  profileUrl?: string;
   reports: ListeningReport[];
 };

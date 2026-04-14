@@ -2,6 +2,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypt
 
 export const SPOTIFY_AUTH_STATE_COOKIE = "spotify_auth_state";
 export const SPOTIFY_CODE_VERIFIER_COOKIE = "spotify_code_verifier";
+export const SPOTIFY_POST_AUTH_REDIRECT_COOKIE = "spotify_post_auth_redirect";
 export const SPOTIFY_SESSION_COOKIE = "spotify_session";
 export const SPOTIFY_TEMP_COOKIE_MAX_AGE = 10 * 60;
 export const SPOTIFY_SESSION_COOKIE_MAX_AGE = 30 * 24 * 60 * 60;

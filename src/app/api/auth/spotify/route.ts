@@ -8,11 +8,22 @@ import {
 import {
   SPOTIFY_AUTH_STATE_COOKIE,
   SPOTIFY_CODE_VERIFIER_COOKIE,
+  SPOTIFY_POST_AUTH_REDIRECT_COOKIE,
   SPOTIFY_TEMP_COOKIE_MAX_AGE,
 } from "@/lib/spotify-session";
 
-export function GET() {
+function getSafeRedirectPath(path: string | null) {
+  if (!path || !path.startsWith("/") || path.startsWith("//")) {
+    return "/reports/daily";
+  }
+
+  return path;
+}
+
+export function GET(request?: Request) {
   try {
+    const url = request ? new URL(request.url) : null;
+    const nextPath = getSafeRedirectPath(url?.searchParams.get("next") ?? null);
     const state = createRandomString();
     const codeVerifier = createRandomString();
     const authorizeUrl = createSpotifyAuthorizeUrl({
@@ -30,6 +41,13 @@ export function GET() {
       secure,
     });
     response.cookies.set(SPOTIFY_CODE_VERIFIER_COOKIE, codeVerifier, {
+      httpOnly: true,
+      maxAge: SPOTIFY_TEMP_COOKIE_MAX_AGE,
+      path: "/",
+      sameSite: "lax",
+      secure,
+    });
+    response.cookies.set(SPOTIFY_POST_AUTH_REDIRECT_COOKIE, nextPath, {
       httpOnly: true,
       maxAge: SPOTIFY_TEMP_COOKIE_MAX_AGE,
       path: "/",

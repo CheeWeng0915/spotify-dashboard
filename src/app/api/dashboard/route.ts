@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { getMockDashboardData } from "@/lib/mock-dashboard";
 import {
   getCurrentSpotifyProfile,
+  getCurrentUserTopArtists,
   getCurrentUserRecentlyPlayed,
   getCurrentUserTopTracks,
   refreshSpotifyAccessToken,
@@ -22,6 +23,7 @@ import {
 const RECENTLY_PLAYED_PAGE_LIMIT = 50;
 const MAX_RECENTLY_PLAYED_REQUESTS = 20;
 const YEAR_WINDOW_MS = 365 * 24 * 60 * 60 * 1000;
+const TOP_ITEMS_LIMIT = 50;
 
 async function getRecentlyPlayedHistory(accessToken: string, nowMs = Date.now()) {
   const cutoffMs = nowMs - YEAR_WINDOW_MS;
@@ -87,12 +89,23 @@ export async function GET() {
       refreshed = true;
     }
 
-    const [profile, shortTermTopTracks, mediumTermTopTracks, longTermTopTracks, recentlyPlayed] =
-      await Promise.all([
+    const [
+      profile,
+      shortTermTopTracks,
+      mediumTermTopTracks,
+      longTermTopTracks,
+      shortTermTopArtists,
+      mediumTermTopArtists,
+      longTermTopArtists,
+      recentlyPlayed,
+    ] = await Promise.all([
         getCurrentSpotifyProfile(activeSession.accessToken),
-        getCurrentUserTopTracks(activeSession.accessToken, "short_term", 10),
-        getCurrentUserTopTracks(activeSession.accessToken, "medium_term", 10),
-        getCurrentUserTopTracks(activeSession.accessToken, "long_term", 10),
+        getCurrentUserTopTracks(activeSession.accessToken, "short_term", TOP_ITEMS_LIMIT),
+        getCurrentUserTopTracks(activeSession.accessToken, "medium_term", TOP_ITEMS_LIMIT),
+        getCurrentUserTopTracks(activeSession.accessToken, "long_term", TOP_ITEMS_LIMIT),
+        getCurrentUserTopArtists(activeSession.accessToken, "short_term", TOP_ITEMS_LIMIT),
+        getCurrentUserTopArtists(activeSession.accessToken, "medium_term", TOP_ITEMS_LIMIT),
+        getCurrentUserTopArtists(activeSession.accessToken, "long_term", TOP_ITEMS_LIMIT),
         getRecentlyPlayedHistory(activeSession.accessToken).catch(
           () => [] as SpotifyRecentlyPlayedItem[],
         ),
@@ -104,6 +117,11 @@ export async function GET() {
           shortTerm: shortTermTopTracks,
           mediumTerm: mediumTermTopTracks,
           longTerm: longTermTopTracks,
+        },
+        topArtists: {
+          shortTerm: shortTermTopArtists,
+          mediumTerm: mediumTermTopArtists,
+          longTerm: longTermTopArtists,
         },
         recentlyPlayed,
       }),
