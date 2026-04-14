@@ -12,9 +12,19 @@ export type SpotifyTokenResponse = {
   refresh_token?: string;
 };
 
+export type SpotifyImage = {
+  url: string;
+  height?: number | null;
+  width?: number | null;
+};
+
 export type SpotifyProfile = {
   id: string;
   display_name: string | null;
+  images?: SpotifyImage[];
+  external_urls?: {
+    spotify?: string;
+  };
   email?: string;
   product?: string;
   followers?: {
@@ -31,10 +41,20 @@ export type SpotifyTopTracksResponse = {
     album: {
       id?: string;
       name: string;
+      images?: SpotifyImage[];
     };
     artists: Array<{
+      id?: string;
       name: string;
     }>;
+  }>;
+};
+
+export type SpotifyTopArtistsResponse = {
+  items: Array<{
+    id: string;
+    name: string;
+    images?: SpotifyImage[];
   }>;
 };
 
@@ -47,8 +67,10 @@ export type SpotifyRecentlyPlayedItem = {
     album: {
       id?: string;
       name: string;
+      images?: SpotifyImage[];
     };
     artists: Array<{
+      id?: string;
       name: string;
     }>;
   };
@@ -163,6 +185,22 @@ export function getCurrentUserTopTracks(
 
   return spotifyFetch<SpotifyTopTracksResponse>(
     `/me/top/tracks?${query.toString()}`,
+    accessToken,
+  );
+}
+
+export function getCurrentUserTopArtists(
+  accessToken: string,
+  timeRange: SpotifyTimeRange = "short_term",
+  limit = 5,
+) {
+  const query = new URLSearchParams({
+    limit: String(limit),
+    time_range: timeRange,
+  });
+
+  return spotifyFetch<SpotifyTopArtistsResponse>(
+    `/me/top/artists?${query.toString()}`,
     accessToken,
   );
 }

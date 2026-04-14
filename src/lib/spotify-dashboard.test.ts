@@ -53,6 +53,21 @@ const topTracks = {
   },
 };
 
+const topArtists = {
+  shortTerm: {
+    items: [
+      { id: "artist-a", name: "Artist A" },
+      { id: "artist-b", name: "Artist B" },
+    ],
+  },
+  mediumTerm: {
+    items: [{ id: "artist-c", name: "Artist C" }],
+  },
+  longTerm: {
+    items: [{ id: "artist-d", name: "Artist D" }],
+  },
+};
+
 describe("createDashboardDataFromSpotify", () => {
   it("builds daily/weekly/monthly/yearly reports from recently played history", () => {
     const now = new Date("2026-04-13T12:00:00.000Z");
@@ -122,6 +137,7 @@ describe("createDashboardDataFromSpotify", () => {
     const data = createDashboardDataFromSpotify({
       profile,
       topTracks,
+      topArtists,
       recentlyPlayed,
       now,
     });
@@ -137,18 +153,146 @@ describe("createDashboardDataFromSpotify", () => {
 
     const daily = data.reports[0];
     expect(daily.metrics[0].value).toBe("6m");
-    expect(daily.metrics[1].value).toBe("2 次");
+    expect(daily.metrics[1].value).toBe("2 plays");
     expect(daily.topTracks[0].title).toBe("Song A");
-    expect(daily.topTracks[0].plays).toBe("2 次");
+    expect(daily.topTracks[0].plays).toBe("2 plays");
+    expect(daily.topArtists[0].name).toBe("Artist A");
 
     const weekly = data.reports[1];
     expect(weekly.metrics[0].value).toBe("10m");
-    expect(weekly.metrics[1].value).toBe("3 次");
+    expect(weekly.metrics[1].value).toBe("3 plays");
     expect(weekly.topAlbums[0].title).toBe("Album A");
+    expect(weekly.topArtists[0].topTrack).toBe("Song A");
 
     const yearly = data.reports[3];
-    expect(yearly.metrics[1].value).toBe("6 次");
+    expect(yearly.metrics[1].value).toBe("6 plays");
     expect(yearly.topTracks[0].title).toBe("Song A");
     expect(yearly.topTracks[0].duration).toBe("6m");
+    expect(yearly.topArtists[0].plays).toBe("2 plays");
+  });
+
+  it("falls back to period rankings when recent history is too short", () => {
+    const now = new Date("2026-04-13T12:00:00.000Z");
+    const recentlyPlayed = [
+      {
+        played_at: "2026-04-13T11:30:00.000Z",
+        track: {
+          id: "a",
+          name: "Song A",
+          duration_ms: 180000,
+          album: { id: "album-a", name: "Album A" },
+          artists: [{ name: "Artist A" }],
+        },
+      },
+      {
+        played_at: "2026-04-13T11:00:00.000Z",
+        track: {
+          id: "a",
+          name: "Song A",
+          duration_ms: 180000,
+          album: { id: "album-a", name: "Album A" },
+          artists: [{ name: "Artist A" }],
+        },
+      },
+    ];
+
+    const data = createDashboardDataFromSpotify({
+      profile,
+      topTracks,
+      topArtists,
+      recentlyPlayed,
+      now,
+    });
+
+    expect(data.reports[0].topTracks[0].title).toBe("Song A");
+    expect(data.reports[1].topTracks[0].title).toBe("Fallback Song 1");
+    expect(data.reports[2].topTracks[0].title).toBe("Medium Song 1");
+    expect(data.reports[3].topTracks[0].title).toBe("Long Song 1");
+  });
+
+  it("selects an artist top track based on highest play count", () => {
+    const now = new Date("2026-04-13T12:00:00.000Z");
+    const recentlyPlayed = [
+      {
+        played_at: "2026-04-13T11:50:00.000Z",
+        track: {
+          id: "song-a",
+          name: "Song A",
+          duration_ms: 180000,
+          album: { id: "album-a", name: "Album A" },
+          artists: [{ name: "Artist A" }],
+        },
+      },
+      {
+        played_at: "2026-04-13T11:40:00.000Z",
+        track: {
+          id: "song-b",
+          name: "Song B",
+          duration_ms: 190000,
+          album: { id: "album-b", name: "Album B" },
+          artists: [{ name: "Artist A" }],
+        },
+      },
+      {
+        played_at: "2026-04-13T11:30:00.000Z",
+        track: {
+          id: "song-b",
+          name: "Song B",
+          duration_ms: 190000,
+          album: { id: "album-b", name: "Album B" },
+          artists: [{ name: "Artist A" }],
+        },
+      },
+      {
+        played_at: "2026-04-13T11:20:00.000Z",
+        track: {
+          id: "song-b",
+          name: "Song B",
+          duration_ms: 190000,
+          album: { id: "album-b", name: "Album B" },
+          artists: [{ name: "Artist A" }],
+        },
+      },
+    ];
+
+    const data = createDashboardDataFromSpotify({
+      profile,
+      topTracks,
+      topArtists,
+      recentlyPlayed,
+      now,
+    });
+
+    expect(data.reports[0].topArtists[0].name).toBe("Artist A");
+    expect(data.reports[0].topArtists[0].topTrack).toBe("Song B");
+  });
+
+  it("caps top lists to keep report payloads bounded", () => {
+    const now = new Date("2026-04-13T12:00:00.000Z");
+    const recentlyPlayed = Array.from({ length: 25 }, (_, index) => ({
+      played_at: new Date(now.getTime() - index * 60 * 60 * 1000).toISOString(),
+      track: {
+        id: `track-${index}`,
+        name: `Track ${index}`,
+        duration_ms: 180000 + index,
+        album: {
+          id: `album-${index}`,
+          name: `Album ${index}`,
+        },
+        artists: [{ name: `Artist ${index}` }],
+      },
+    }));
+
+    const data = createDashboardDataFromSpotify({
+      profile,
+      topTracks,
+      topArtists,
+      recentlyPlayed,
+      now,
+    });
+
+    expect(data.reports[0].topTracks).toHaveLength(20);
+    expect(data.reports[0].topAlbums).toHaveLength(20);
+    expect(data.reports[0].topArtists).toHaveLength(20);
   });
 });
