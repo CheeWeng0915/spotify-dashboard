@@ -32,6 +32,9 @@ export function LiquidNavbar() {
               onPointerDown={() => {
                 moveIndicatorTo(index);
               }}
+              onFocus={() => {
+                moveIndicatorTo(index);
+              }}
             >
               {item.label}
             </Link>

@@ -43,6 +43,31 @@ function getFirstHeaderValue(value: string | null) {
   return value?.split(",")[0]?.trim();
 }
 
+function isLocalHost(host: string) {
+  const hostname = host.split(":")[0]?.toLowerCase();
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+}
+
+function inferRequestProtocol(
+  requestUrl: URL,
+  host: string,
+  forwardedProto?: string,
+) {
+  if (!isLocalHost(host)) {
+    return "https";
+  }
+
+  if (forwardedProto === "https" || forwardedProto === "http") {
+    return forwardedProto;
+  }
+
+  if (requestUrl.protocol === "https:") {
+    return "https";
+  }
+
+  return isLocalHost(host) ? "http" : "https";
+}
+
 export function getRequestOrigin(request: Request) {
   const requestUrl = new URL(request.url);
   const forwardedHost = getFirstHeaderValue(
@@ -53,14 +78,19 @@ export function getRequestOrigin(request: Request) {
   );
 
   if (forwardedHost) {
-    const protocol = forwardedProto === "http" ? "http" : "https";
+    const protocol = inferRequestProtocol(
+      requestUrl,
+      forwardedHost,
+      forwardedProto,
+    );
     return `${protocol}://${forwardedHost}`;
   }
 
   const host = getFirstHeaderValue(request.headers.get("host"));
 
   if (host) {
-    return `${requestUrl.protocol}//${host}`;
+    const protocol = inferRequestProtocol(requestUrl, host, forwardedProto);
+    return `${protocol}://${host}`;
   }
 
   return requestUrl.origin;

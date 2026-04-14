@@ -82,4 +82,14 @@ describe("spotify config", () => {
 
     expect(getRequestOrigin(request)).toBe("https://my-app.example.dev");
   });
+
+  it("falls back to request protocol when forwarded proto is missing", () => {
+    const request = new Request("https://localhost:3000/path", {
+      headers: {
+        "x-forwarded-host": "my-app.example.dev",
+      },
+    });
+
+    expect(getRequestOrigin(request)).toBe("https://my-app.example.dev");
+  });
 });
