@@ -26,6 +26,23 @@ const MAX_RECENTLY_PLAYED_REQUESTS = 20;
 const YEAR_WINDOW_MS = 365 * 24 * 60 * 60 * 1000;
 const TOP_ITEMS_LIMIT = 50;
 
+function pickImageUrl(images: Array<{ url: string }> | undefined) {
+  return images?.[0]?.url;
+}
+
+function createConnectedFallbackData(
+  profile: Awaited<ReturnType<typeof getCurrentSpotifyProfile>>,
+) {
+  const data = getMockDashboardData();
+
+  return {
+    ...data,
+    profileName: profile.display_name ?? profile.id,
+    profileImageUrl: pickImageUrl(profile.images),
+    profileUrl: profile.external_urls?.spotify,
+  };
+}
+
 async function getRecentlyPlayedHistory(accessToken: string, nowMs = Date.now()) {
   const cutoffMs = nowMs - YEAR_WINDOW_MS;
   const collected: SpotifyRecentlyPlayedItem[] = [];
@@ -155,7 +172,23 @@ export async function GET() {
     }
 
     return response;
-  } catch {
+  } catch (error) {
+    console.error("spotify_dashboard_fetch_failed", error);
+
+    try {
+      const profile = await getCurrentSpotifyProfile(session.accessToken);
+
+      return NextResponse.json({
+        data: createConnectedFallbackData(profile),
+        spotifyConfigured: config.isConfigured,
+        spotifyAuthenticated: true,
+        source: "mock",
+        error: "spotify_fetch_failed",
+      });
+    } catch (profileError) {
+      console.error("spotify_profile_fetch_failed", profileError);
+    }
+
     return NextResponse.json({
       data: getMockDashboardData(),
       spotifyConfigured: config.isConfigured,
