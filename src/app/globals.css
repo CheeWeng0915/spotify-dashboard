@@ -100,8 +100,8 @@ body {
   --site-nav-pad: 8px;
   position: relative;
   display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 8px;
   width: min(760px, 100%);
   padding: var(--site-nav-pad);
   border-radius: 999px;
@@ -117,6 +117,15 @@ body {
   -webkit-backdrop-filter: blur(20px) saturate(130%);
   isolation: isolate;
   overflow: hidden;
+}
+
+.site-nav__links {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 auto;
 }
 
 .site-nav::before {
@@ -240,9 +249,13 @@ body {
 
 .site-nav__connect,
 .site-nav__avatar-link {
-  position: relative;
+  position: absolute;
+  top: 50%;
+  right: var(--site-nav-pad);
+  transform: translateY(-50%);
   z-index: 3;
-  margin-left: auto;
+  margin-left: 0;
+  flex-shrink: 0;
 }
 
 .site-nav__connect {
@@ -985,8 +998,23 @@ button:focus-visible {
   .site-nav {
     --site-nav-pad: 6px;
     width: 100%;
+    overflow: hidden;
+  }
+
+  .site-nav__links {
     gap: 6px;
+    max-width: calc(100% - 52px);
     overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .site-nav__links::-webkit-scrollbar {
+    display: none;
+  }
+
+  .site-nav__connect,
+  .site-nav__avatar-link {
+    right: 6px;
   }
 
   .site-nav__link {

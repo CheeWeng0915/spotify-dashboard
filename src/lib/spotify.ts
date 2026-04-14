@@ -39,6 +39,33 @@ export function getAppUrl() {
   return (process.env.APP_URL ?? DEFAULT_APP_URL).replace(/\/$/, "");
 }
 
+function getFirstHeaderValue(value: string | null) {
+  return value?.split(",")[0]?.trim();
+}
+
+export function getRequestOrigin(request: Request) {
+  const requestUrl = new URL(request.url);
+  const forwardedHost = getFirstHeaderValue(
+    request.headers.get("x-forwarded-host"),
+  );
+  const forwardedProto = getFirstHeaderValue(
+    request.headers.get("x-forwarded-proto"),
+  );
+
+  if (forwardedHost) {
+    const protocol = forwardedProto === "http" ? "http" : "https";
+    return `${protocol}://${forwardedHost}`;
+  }
+
+  const host = getFirstHeaderValue(request.headers.get("host"));
+
+  if (host) {
+    return `${requestUrl.protocol}//${host}`;
+  }
+
+  return requestUrl.origin;
+}
+
 export function getSpotifyScopes() {
   return (process.env.SPOTIFY_SCOPES ?? DEFAULT_SCOPES.join(" "))
     .split(/\s+/)

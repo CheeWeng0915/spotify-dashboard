@@ -3,6 +3,7 @@ import {
   SpotifyConfigError,
   createCodeChallenge,
   createSpotifyAuthorizeUrl,
+  getRequestOrigin,
   getSpotifyConfig,
   timingSafeStringEqual,
 } from "@/lib/spotify";
@@ -69,5 +70,16 @@ describe("spotify config", () => {
   it("compares OAuth state values safely", () => {
     expect(timingSafeStringEqual("same", "same")).toBe(true);
     expect(timingSafeStringEqual("same", "nope")).toBe(false);
+  });
+
+  it("derives request origin from forwarded headers", () => {
+    const request = new Request("http://localhost:3000/path", {
+      headers: {
+        "x-forwarded-host": "my-app.example.dev",
+        "x-forwarded-proto": "https",
+      },
+    });
+
+    expect(getRequestOrigin(request)).toBe("https://my-app.example.dev");
   });
 });

@@ -28,4 +28,22 @@ describe("/api/auth/callback/spotify", () => {
     expect(location).not.toContain("secret-code");
     expect(body).not.toContain("secret-code");
   });
+
+  it("redirects using forwarded host/proto on callback errors", async () => {
+    const request = new NextRequest(
+      "http://localhost:3000/api/auth/callback/spotify?error=access_denied",
+      {
+        headers: {
+          "x-forwarded-host": "my-app.example.dev",
+          "x-forwarded-proto": "https",
+        },
+      },
+    );
+    const response = await GET(request);
+    const location = response.headers.get("location") ?? "";
+
+    expect(location).toContain("https://my-app.example.dev/");
+    expect(location).toContain("spotify=error");
+    expect(location).toContain("reason=spotify_denied");
+  });
 });

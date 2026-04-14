@@ -18,23 +18,25 @@ export function LiquidNavbar() {
     <header className="site-nav-wrap">
       <nav className="site-nav" aria-label="Primary">
         <span ref={indicatorRef} aria-hidden="true" className="site-nav__indicator" />
-        {NAV_ITEMS.map((item, index) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            ref={(element) => {
-              linkRefs.current[index] = element;
-            }}
-            className={`site-nav__link${
-              item.isActive(pathname) ? " site-nav__link--active" : ""
-            }`}
-            onPointerDown={() => {
-              moveIndicatorTo(index);
-            }}
-          >
-            {item.label}
-          </Link>
-        ))}
+        <div className="site-nav__links">
+          {NAV_ITEMS.map((item, index) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              ref={(element) => {
+                linkRefs.current[index] = element;
+              }}
+              className={`site-nav__link${
+                item.isActive(pathname) ? " site-nav__link--active" : ""
+              }`}
+              onPointerDown={() => {
+                moveIndicatorTo(index);
+              }}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </div>
         {profileState.spotifyAuthenticated ? (
           <Link className="site-nav__avatar-link" href="/profile" aria-label="Open profile">
             {profileState.profileImageUrl ? (
