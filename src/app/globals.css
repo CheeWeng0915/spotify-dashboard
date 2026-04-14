@@ -84,27 +84,30 @@ body {
 
 .app-shell {
   min-height: 100vh;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
 }
 
 .site-nav-wrap {
-  position: sticky;
-  top: 0;
+  position: fixed;
+  right: 0;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  left: 0;
   z-index: 40;
   display: flex;
   justify-content: center;
-  padding: 14px var(--container-pad) 0;
+  padding: 0 var(--container-pad);
   animation: nav-pop-in 620ms var(--ease-fluid) both;
+  pointer-events: none;
 }
 
 .site-nav {
   --site-nav-pad: 8px;
   position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: min(760px, 100%);
+  display: grid;
+  width: min(520px, 100%);
+  min-height: 76px;
   padding: var(--site-nav-pad);
-  border-radius: 999px;
+  border-radius: 8px;
   border: 1px solid rgba(225, 247, 233, 0.28);
   background:
     radial-gradient(circle at 14% 0%, rgba(255, 255, 255, 0.36), transparent 52%),
@@ -117,16 +120,17 @@ body {
   -webkit-backdrop-filter: blur(20px) saturate(130%);
   isolation: isolate;
   overflow: hidden;
+  pointer-events: auto;
 }
 
 .site-nav__links {
   position: relative;
   z-index: 3;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
   min-width: 0;
+  width: 100%;
 }
 
 .site-nav::before {
@@ -172,7 +176,7 @@ body {
   bottom: var(--site-nav-pad);
   width: var(--site-nav-indicator-width, 0px);
   border: 1px solid rgba(227, 255, 238, 0.42);
-  border-radius: 999px;
+  border-radius: 8px;
   background: linear-gradient(
     160deg,
     rgba(255, 255, 255, 0.26),
@@ -197,17 +201,18 @@ body {
 .site-nav__link {
   position: relative;
   z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 38px;
-  min-width: 92px;
-  padding: 9px 14px;
-  border-radius: 999px;
+  display: grid;
+  grid-template-rows: 24px 18px;
+  place-items: center;
+  gap: 4px;
+  min-height: 58px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
   color: rgba(227, 246, 234, 0.88);
-  font-size: 0.9rem;
+  font-size: 0.76rem;
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
   overflow: hidden;
   transition:
     color 0.26s var(--ease-emphasized),
@@ -246,6 +251,20 @@ body {
 .site-nav__link--active::before {
   opacity: 1;
   transform: scale(1);
+}
+
+.site-nav__icon {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+.site-nav__link span {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .site-nav__connect,
@@ -993,7 +1012,7 @@ button:focus-visible {
 
 @media (max-width: 640px) {
   .site-nav-wrap {
-    padding-top: 10px;
+    bottom: calc(10px + env(safe-area-inset-bottom));
   }
 
   .site-nav {
@@ -1004,36 +1023,16 @@ button:focus-visible {
 
   .site-nav__links {
     gap: 6px;
-    max-width: calc(100% - 52px);
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .site-nav__links::-webkit-scrollbar {
-    display: none;
-  }
-
-  .site-nav__connect,
-  .site-nav__avatar-link {
-    right: 6px;
   }
 
   .site-nav__link {
-    min-height: 36px;
-    min-width: max-content;
-    padding: 8px 12px;
-    font-size: 0.84rem;
-  }
-
-  .site-nav__connect {
-    min-height: 36px;
-    padding: 8px 12px;
+    min-height: 56px;
+    padding: 7px 8px;
+    font-size: 0.74rem;
   }
 
   .dashboard {
-    padding: 26px var(--container-pad) 52px;
+    padding: 26px var(--container-pad) 104px;
   }
 
   .dashboard__hero {

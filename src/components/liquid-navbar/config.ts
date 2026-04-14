@@ -7,22 +7,18 @@ export type NavbarItem = {
 export const NAV_ITEMS: NavbarItem[] = [
   {
     href: "/",
-    label: "Overview",
+    label: "Dashboard",
     isActive: (pathname: string) => pathname === "/",
   },
   {
     href: "/reports/daily",
-    label: "Reports",
+    label: "Tracks",
     isActive: (pathname: string) => pathname.startsWith("/reports/"),
   },
   {
-    href: "/library/artists/daily",
-    label: "Artists",
-    isActive: (pathname: string) => pathname.startsWith("/library/artists"),
-  },
-  {
-    href: "/library/albums/daily",
-    label: "Albums",
-    isActive: (pathname: string) => pathname.startsWith("/library/albums"),
+    href: "/connect",
+    label: "Connect",
+    isActive: (pathname: string) =>
+      pathname.startsWith("/connect") || pathname.startsWith("/profile"),
   },
 ];
