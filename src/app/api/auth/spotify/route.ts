@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { getSpotifyConfig } from "@/lib/spotify";
+import {
+  SPOTIFY_AUTH_STATE_COOKIE,
+  buildSpotifyAuthorizeUrl,
+  createSpotifyAuthState,
+  getCookieOptions,
+  getSpotifyConfig,
+} from "@/lib/spotify";
 
 export function GET() {
   const config = getSpotifyConfig();
@@ -15,10 +21,14 @@ export function GET() {
     );
   }
 
-  return NextResponse.json({
-    message: "Spotify auth route scaffolded.",
-    nextStep:
-      "Replace this response with your authorize redirect once credentials are ready.",
-    redirectUri: config.redirectUri,
-  });
+  const state = createSpotifyAuthState();
+  const response = NextResponse.redirect(buildSpotifyAuthorizeUrl(state));
+
+  response.cookies.set(
+    SPOTIFY_AUTH_STATE_COOKIE,
+    state,
+    getCookieOptions(10 * 60),
+  );
+
+  return response;
 }

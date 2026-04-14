@@ -1,16 +1,21 @@
+import { cookies } from "next/headers";
 import { DashboardShell } from "@/components/dashboard-shell";
-import { getMockDashboardData } from "@/lib/mock-dashboard";
-import { isSpotifyConfigured } from "@/lib/spotify";
+import {
+  SPOTIFY_SESSION_COOKIE,
+  getDashboardData,
+  parseSpotifySession,
+} from "@/lib/spotify";
 
-export default function HomePage() {
-  const data = getMockDashboardData();
+export default async function HomePage() {
+  const cookieStore = await cookies();
+  const session = parseSpotifySession(
+    cookieStore.get(SPOTIFY_SESSION_COOKIE)?.value,
+  );
+  const data = await getDashboardData(session);
 
   return (
     <main>
-      <DashboardShell
-        data={data}
-        spotifyConfigured={isSpotifyConfigured()}
-      />
+      <DashboardShell data={data} />
     </main>
   );
 }

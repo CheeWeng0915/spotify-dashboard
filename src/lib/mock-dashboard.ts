@@ -27,20 +27,26 @@ export function getMockDashboardData(): DashboardData {
         title: "Northern Lights",
         artist: "Sora Vale",
         album: "Static Bloom",
-        plays: "482K",
+        detail: "Mock track · Connect Spotify for live listening data",
       },
       {
         title: "Afterglow Avenue",
         artist: "Lumen Street",
         album: "Night Transit",
-        plays: "391K",
+        detail: "Mock track · Connect Spotify for live listening data",
       },
       {
         title: "Deep Blue Echo",
         artist: "Atlas Hotel",
         album: "Tide Signals",
-        plays: "327K",
+        detail: "Mock track · Connect Spotify for live listening data",
       },
     ],
+    connection: {
+      isConfigured: false,
+      isConnected: false,
+      isLive: false,
+      message: "Connect Spotify to replace mock stats with your account data.",
+    },
   };
 }
