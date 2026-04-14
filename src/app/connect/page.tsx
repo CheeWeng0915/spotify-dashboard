@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { getInitialDashboardShellProps } from "@/lib/dashboard-page";
 
 type ConnectPageProps = {
@@ -24,10 +23,7 @@ export default async function ConnectPage({ searchParams }: ConnectPageProps) {
   const spotifyStatus = params.spotify;
   const spotifyReason = params.reason;
   const initialProps = await getInitialDashboardShellProps();
-
-  if (initialProps.spotifyAuthenticated) {
-    redirect(nextPath);
-  }
+  const alreadyConnected = initialProps.spotifyAuthenticated && spotifyStatus !== "error";
 
   return (
     <main>
@@ -44,12 +40,17 @@ export default async function ConnectPage({ searchParams }: ConnectPageProps) {
               className="dashboard__button"
               href={`/api/auth/spotify?next=${encodeURIComponent(nextPath)}`}
             >
-              Connect Spotify
+              {alreadyConnected ? "Reconnect Spotify" : "Connect Spotify"}
             </a>
             <Link className="dashboard__api dashboard__api--ghost" href="/">
               Back to overview
             </Link>
           </div>
+          {alreadyConnected ? (
+            <p className="dashboard__status-label">
+              You are already connected. Reconnect only if your Spotify data stops refreshing.
+            </p>
+          ) : null}
           {spotifyStatus === "error" ? (
             <p className="dashboard__status-label">
               Spotify connection failed

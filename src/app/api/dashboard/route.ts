@@ -7,6 +7,7 @@ import {
   getCurrentUserRecentlyPlayed,
   getCurrentUserTopTracks,
   refreshSpotifyAccessToken,
+  SpotifyApiError,
 } from "@/lib/spotify-api";
 import type {
   SpotifyProfile,
@@ -16,6 +17,11 @@ import type {
 } from "@/lib/spotify-api";
 import { createDashboardDataFromSpotify } from "@/lib/spotify-dashboard";
 import { getSpotifyConfig } from "@/lib/spotify";
+import type {
+  DashboardAuthReason,
+  DashboardAuthState,
+  DashboardPayload,
+} from "@/types/dashboard-api";
 import {
   getSpotifySessionCookieMaxAge,
   SPOTIFY_SESSION_COOKIE,
@@ -32,63 +38,89 @@ const MAX_RECENTLY_PLAYED_REQUESTS = 20;
 const YEAR_WINDOW_MS = 365 * 24 * 60 * 60 * 1000;
 const TOP_ITEMS_LIMIT = 50;
 
-const EMPTY_TOP_TRACKS: SpotifyTopTracksResponse = {
-  items: [],
-};
-
-const EMPTY_TOP_ARTISTS: SpotifyTopArtistsResponse = {
-  items: [],
-};
-
-function pickImageUrl(images: Array<{ url: string }> | undefined) {
-  return images?.[0]?.url;
+function createMockPayload(options: {
+  spotifyConfigured: boolean;
+  authState: DashboardAuthState;
+  reason: DashboardAuthReason;
+  spotifyAuthenticated?: boolean;
+  error?: string;
+}): DashboardPayload {
+  return {
+    data: getMockDashboardData(),
+    spotifyConfigured: options.spotifyConfigured,
+    spotifyAuthenticated: options.spotifyAuthenticated ?? false,
+    source: "mock",
+    authState: options.authState,
+    reason: options.reason,
+    error: options.error,
+  };
 }
 
-function createConnectedFallbackData(profile: SpotifyProfile): DashboardData {
-  const periods: ListeningPeriod[] = ["daily", "weekly", "monthly", "yearly"];
+function classifySpotifyFetchError(error: unknown): {
+  authState: DashboardAuthState;
+  reason: DashboardAuthReason;
+  clearSession: boolean;
+  error: string;
+} {
+  if (error instanceof SpotifyApiError) {
+    if (error.status === 401 || error.status === 403) {
+      return {
+        authState: "needs_reauth",
+        reason: "spotify_unauthorized",
+        clearSession: true,
+        error: "spotify_unauthorized",
+      };
+    }
+
+    if (error.status === 429) {
+      return {
+        authState: "transient_error",
+        reason: "spotify_rate_limited",
+        clearSession: false,
+        error: "spotify_rate_limited",
+      };
+    }
+
+    return {
+      authState: "transient_error",
+      reason: "spotify_upstream_error",
+      clearSession: false,
+      error: "spotify_upstream_error",
+    };
+  }
 
   return {
-    generatedAt: new Date().toISOString(),
-    profileName: profile.display_name ?? profile.id,
-    profileImageUrl: pickImageUrl(profile.images),
-    profileUrl: profile.external_urls?.spotify,
-    reports: periods.map((period) => ({
-      period,
-      heading:
-        period === "daily"
-          ? "Daily Report"
-          : period === "weekly"
-            ? "Weekly Report"
-            : period === "monthly"
-              ? "Monthly Report"
-              : "Yearly Report (Wrapped Style)",
-      subheading:
-        "Spotify is connected, but report data could not be loaded right now.",
-      metrics: [
-        {
-          label: "Listening Time",
-          value: "No data",
-          delta: "Spotify connected",
-          description: "Waiting for Spotify report access to become available.",
-        },
-        {
-          label: "Play Count",
-          value: "No data",
-          delta: "No sample data shown",
-          description: "This app will not mix mock reports into a connected account.",
-        },
-        {
-          label: period === "yearly" ? "Song of the Year" : "Most Played Song",
-          value: "No data",
-          delta: "Try again soon",
-          description: "Reconnect if Spotify keeps returning an authorization error.",
-        },
-      ],
-      topTracks: [],
-      topArtists: [],
-      topAlbums: [],
-    })),
+    authState: "transient_error",
+    reason: "spotify_upstream_error",
+    clearSession: false,
+    error: "spotify_upstream_error",
   };
+}
+
+function createJsonResponse(
+  payload: DashboardPayload,
+  options: {
+    clearSession?: boolean;
+    refreshedSession?: ReturnType<typeof createSpotifySession>;
+  } = {},
+) {
+  const response = NextResponse.json(payload);
+
+  if (options.clearSession) {
+    response.cookies.delete(SPOTIFY_SESSION_COOKIE);
+  }
+
+  if (options.refreshedSession) {
+    response.cookies.set(SPOTIFY_SESSION_COOKIE, sealSpotifySession(options.refreshedSession), {
+      httpOnly: true,
+      maxAge: getSpotifySessionCookieMaxAge(options.refreshedSession),
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    });
+  }
+
+  return response;
 }
 
 async function getRecentlyPlayedHistory(accessToken: string, nowMs = Date.now()) {
@@ -143,39 +175,75 @@ export async function GET() {
   const sealedSession = cookieStore.get(SPOTIFY_SESSION_COOKIE)?.value;
   const session = sealedSession ? unsealSpotifySession(sealedSession) : null;
 
-  if (!session || isSpotifySessionHardExpired(session)) {
-    const response = NextResponse.json({
-      data: getMockDashboardData(),
-      spotifyConfigured: config.isConfigured,
-      spotifyAuthenticated: false,
-      source: "mock",
-    });
-
-    if (session) {
-      response.cookies.delete(SPOTIFY_SESSION_COOKIE);
-    }
-
-    return response;
+  if (!session) {
+    return createJsonResponse(
+      createMockPayload({
+        spotifyConfigured: config.isConfigured,
+        authState: "not_connected",
+        reason: "missing_session",
+      }),
+      {
+        clearSession: Boolean(sealedSession),
+      },
+    );
   }
 
-  try {
-    let activeSession = session;
-    let refreshed = false;
+  if (isSpotifySessionHardExpired(session)) {
+    return createJsonResponse(
+      createMockPayload({
+        spotifyConfigured: config.isConfigured,
+        authState: "not_connected",
+        reason: "hard_expired",
+      }),
+      {
+        clearSession: true,
+      },
+    );
+  }
 
-    if (isSpotifySessionExpired(session)) {
-      if (!session.refreshToken) {
-        throw new Error("Missing refresh token.");
-      }
+  let activeSession = session;
+  let refreshedSession: ReturnType<typeof createSpotifySession> | undefined;
 
+  if (isSpotifySessionExpired(session)) {
+    if (!session.refreshToken) {
+      return createJsonResponse(
+        createMockPayload({
+          spotifyConfigured: config.isConfigured,
+          authState: "needs_reauth",
+          reason: "missing_refresh_token",
+          error: "spotify_reauth_required",
+        }),
+        {
+          clearSession: true,
+        },
+      );
+    }
+
+    try {
       activeSession = createSpotifySession(
         await refreshSpotifyAccessToken(session.refreshToken),
         session.refreshToken,
         session.sessionExpiresAt,
       );
-      refreshed = true;
-    }
+      refreshedSession = activeSession;
+    } catch (error) {
+      console.error("spotify_token_refresh_failed", error);
 
-    const profile = await getCurrentSpotifyProfile(activeSession.accessToken);
+      return createJsonResponse(
+        createMockPayload({
+          spotifyConfigured: config.isConfigured,
+          authState: "needs_reauth",
+          reason: "token_refresh_failed",
+          error: "spotify_reauth_required",
+        }),
+        {
+          clearSession: true,
+        },
+      );
+    }
+  }
+
+  try {
     const [
       shortTermTopTracks,
       mediumTermTopTracks,
@@ -221,66 +289,50 @@ export async function GET() {
           [] as SpotifyRecentlyPlayedItem[],
         ),
       ]);
-    const response = NextResponse.json({
-      data: createDashboardDataFromSpotify({
-        profile,
-        topTracks: {
-          shortTerm: shortTermTopTracks,
-          mediumTerm: mediumTermTopTracks,
-          longTerm: longTermTopTracks,
-        },
-        topArtists: {
-          shortTerm: shortTermTopArtists,
-          mediumTerm: mediumTermTopArtists,
-          longTerm: longTermTopArtists,
-        },
-        recentlyPlayed,
-      }),
-      spotifyConfigured: config.isConfigured,
-      spotifyAuthenticated: true,
-      source: "spotify",
-    });
-
-    if (refreshed) {
-      const maxAge = getSpotifySessionCookieMaxAge(activeSession);
-
-      response.cookies.set(
-        SPOTIFY_SESSION_COOKIE,
-        sealSpotifySession(activeSession),
-        {
-          httpOnly: true,
-          maxAge,
-          path: "/",
-          sameSite: "lax",
-          secure: process.env.NODE_ENV === "production",
-        },
-      );
-    }
-
-    return response;
-  } catch (error) {
-    console.error("spotify_dashboard_fetch_failed", error);
-
-    try {
-      const profile = await getCurrentSpotifyProfile(session.accessToken);
-
-      return NextResponse.json({
-        data: createConnectedFallbackData(profile),
+    return createJsonResponse(
+      {
+        data: createDashboardDataFromSpotify({
+          profile,
+          topTracks: {
+            shortTerm: shortTermTopTracks,
+            mediumTerm: mediumTermTopTracks,
+            longTerm: longTermTopTracks,
+          },
+          topArtists: {
+            shortTerm: shortTermTopArtists,
+            mediumTerm: mediumTermTopArtists,
+            longTerm: longTermTopArtists,
+          },
+          recentlyPlayed,
+        }),
         spotifyConfigured: config.isConfigured,
         spotifyAuthenticated: true,
         source: "spotify",
-        error: "spotify_fetch_failed",
-      });
-    } catch (profileError) {
-      console.error("spotify_profile_fetch_failed", profileError);
-    }
+        authState: "connected",
+      },
+      {
+        refreshedSession,
+      },
+    );
+  } catch (error) {
+    console.error("spotify_dashboard_fetch_failed", error);
+    const classifiedError = classifySpotifyFetchError(error);
 
-    return NextResponse.json({
-      data: getMockDashboardData(),
-      spotifyConfigured: config.isConfigured,
-      spotifyAuthenticated: true,
-      source: "mock",
-      error: "spotify_fetch_failed",
-    });
+    return createJsonResponse(
+      createMockPayload({
+        spotifyConfigured: config.isConfigured,
+        authState: classifiedError.authState,
+        reason: classifiedError.reason,
+        spotifyAuthenticated: classifiedError.authState === "transient_error",
+        error: classifiedError.error,
+      }),
+      {
+        clearSession: classifiedError.clearSession,
+        refreshedSession:
+          classifiedError.clearSession || classifiedError.authState === "needs_reauth"
+            ? undefined
+            : refreshedSession,
+      },
+    );
   }
 }
