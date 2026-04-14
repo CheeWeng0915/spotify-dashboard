@@ -10,6 +10,7 @@ type DashboardPayload = {
   spotifyConfigured: boolean;
   spotifyAuthenticated: boolean;
   source: DashboardSource;
+  error?: string;
 };
 
 type DashboardState = {
@@ -131,7 +132,7 @@ export function useDashboardState({
           spotifyConfigured: payload.spotifyConfigured,
           spotifyAuthenticated: payload.spotifyAuthenticated,
           source: payload.source,
-          fetchError: false,
+          fetchError: Boolean(payload.error),
         });
       } catch {
         if (!active) {
