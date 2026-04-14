@@ -1,130 +1,206 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo } from "react";
 import { MetricCard } from "@/components/metric-card";
+import { TopAlbumList } from "@/components/top-album-list";
+import { TopArtistList } from "@/components/top-artist-list";
 import { TopTrackList } from "@/components/top-track-list";
-import type { DashboardData } from "@/types/dashboard";
+import { useDashboardState } from "@/components/use-dashboard-state";
+import type { DashboardData, ListeningPeriod } from "@/types/dashboard";
 
 type DashboardShellProps = {
   data: DashboardData;
+  spotifyConfigured: boolean;
+  spotifyAuthenticated: boolean;
+  period?: ListeningPeriod;
 };
 
-function DashboardIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M4 13h7V4H4v9Zm0 7h7v-5H4v5Zm9 0h7v-9h-7v9Zm0-16v5h7V4h-7Z" />
-    </svg>
-  );
-}
+const PERIOD_LABELS: Record<ListeningPeriod, string> = {
+  daily: "Daily",
+  weekly: "Weekly",
+  monthly: "Monthly",
+  yearly: "Yearly",
+};
 
-function TracksIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M9 18.5A3.5 3.5 0 1 1 7 15.34V5.5c0-.48.34-.9.81-.98l10-1.8A1 1 0 0 1 19 3.7v11.8a3.5 3.5 0 1 1-2-3.16V7.3l-8 1.44v9.76Z" />
-    </svg>
-  );
-}
+export function DashboardShell({
+  data,
+  spotifyConfigured,
+  spotifyAuthenticated,
+  period,
+}: DashboardShellProps) {
+  const state = useDashboardState({
+    data,
+    spotifyConfigured,
+    spotifyAuthenticated,
+  });
 
-function ConnectIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M8.5 12a3.5 3.5 0 0 1 3.5-3.5h3v2h-3a1.5 1.5 0 0 0 0 3h3v2h-3A3.5 3.5 0 0 1 8.5 12Zm4.5 1h-2v-2h2v2Zm-4 2.5H6a3.5 3.5 0 1 1 0-7h3v2H6a1.5 1.5 0 0 0 0 3h3v2Zm6-7h3a3.5 3.5 0 1 1 0 7h-3v-2h3a1.5 1.5 0 0 0 0-3h-3v-2Z" />
-    </svg>
-  );
-}
-
-function BottomNav() {
-  return (
-    <nav className="bottom-nav" aria-label="Dashboard navigation">
-      <a className="bottom-nav__item" href="#dashboard">
-        <DashboardIcon />
-        <span>Dashboard</span>
-      </a>
-      <a className="bottom-nav__item" href="#tracks">
-        <TracksIcon />
-        <span>Tracks</span>
-      </a>
-      <a className="bottom-nav__item" href="#connect">
-        <ConnectIcon />
-        <span>Connect</span>
-      </a>
-    </nav>
-  );
-}
-
-export function DashboardShell({ data }: DashboardShellProps) {
-  const { connection } = data;
-  const actionHref = connection.isConnected
-    ? "/api/auth/logout"
-    : "/api/auth/spotify";
-  const actionLabel = connection.isConnected ? "Disconnect" : "Connect Spotify";
+  const statusText = state.spotifyAuthenticated
+    ? "Spotify account connected"
+    : state.spotifyConfigured
+      ? "Connect Spotify from the dedicated connect page to unlock reports."
+      : "Configure Spotify environment variables to enable live data.";
+  const generatedAtLabel = useMemo(() => {
+    const timestamp = Date.parse(state.data.generatedAt);
+    if (Number.isNaN(timestamp)) {
+      return "Unknown";
+    }
+    return new Intl.DateTimeFormat("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour12: false,
+      timeZone: "UTC",
+    }).format(new Date(timestamp));
+  }, [state.data.generatedAt]);
+  const sourceLabel = state.source === "spotify" ? "Spotify live data" : "Sample data";
+  const activeReport = period
+    ? state.data.reports.find((report) => report.period === period)
+    : null;
+  const isOverview = !period;
 
   return (
-    <section className="dashboard" id="dashboard">
-      <div className="dashboard__hero">
-        <div className="dashboard__intro">
-          <span className="dashboard__eyebrow">
-            {connection.isLive ? "Live Spotify" : "Spotify Dashboard"}
-          </span>
+    <section className="dashboard" aria-label="Spotify reports">
+      <header className="dashboard__hero glass">
+        <div>
           <h1 className="dashboard__title">
-            {connection.displayName
-              ? `${connection.displayName}'s listening pulse`
-              : "Your Spotify dashboard"}
+            {isOverview
+              ? "Spotify Dashboard Overview"
+              : activeReport?.heading ?? "Listening Report"}
           </h1>
           <p className="dashboard__copy">
-            {connection.message}
+            {isOverview
+              ? "View daily, weekly, monthly, and yearly listening insights in a smooth Apple-style interface."
+              : activeReport?.subheading ?? "Track and album stats for this period."}
           </p>
-          <a className="dashboard__button" href={actionHref}>
-            {actionLabel}
-          </a>
-        </div>
-
-        <aside className="dashboard__panel dashboard__status" id="connect">
-          <div className="dashboard__profile">
-            {connection.avatarUrl ? (
-              <img
-                className="dashboard__avatar"
-                src={connection.avatarUrl}
-                alt={`${connection.displayName ?? "Spotify profile"} avatar`}
-              />
-            ) : (
-              <div className="dashboard__avatar dashboard__avatar--empty" />
-            )}
-            <div>
-              <span className="dashboard__status-label">Account</span>
-              <strong className="dashboard__status-value">
-                {connection.displayName ?? "Not connected"}
-              </strong>
-            </div>
           </div>
+
+        <aside className="dashboard__status">
           <span
             className={`dashboard__status-chip${
-              connection.isConnected ? "" : " dashboard__status-chip--off"
+              state.spotifyConfigured ? "" : " dashboard__status-chip--off"
             }`}
           >
-            {connection.isConnected ? "Connected" : "Disconnected"}
+            {statusText}
           </span>
-          <p className="dashboard__status-note">{connection.message}</p>
-          {connection.profileUrl ? (
-            <a className="dashboard__text-link" href={connection.profileUrl}>
-              Open Spotify profile
-            </a>
+          <div className="dashboard__actions">
+            {state.spotifyAuthenticated ? (
+              <Link className="dashboard__button dashboard__button--secondary" href="/profile">
+                Open profile
+              </Link>
+            ) : (
+              <Link className="dashboard__button" href="/connect">
+                Connect Spotify
+              </Link>
+            )}
+          </div>
+          <span className="dashboard__status-label">
+            Source: {sourceLabel} · Updated: {generatedAtLabel}
+          </span>
+          {state.spotifyAuthenticated && state.source === "spotify" ? (
+            <Link className="dashboard__status-account" href="/profile">
+              {state.data.profileImageUrl ? (
+                <img
+                  className="dashboard__status-avatar"
+                  src={state.data.profileImageUrl}
+                  alt={`${state.data.profileName} avatar`}
+                />
+              ) : (
+                <span className="dashboard__status-avatar dashboard__status-avatar--fallback" aria-hidden>
+                  {state.data.profileName.charAt(0).toUpperCase()}
+                </span>
+              )}
+              <span className="dashboard__status-label">
+                Current account: {state.data.profileName}
+              </span>
+            </Link>
+          ) : null}
+          {state.fetchError ? (
+            <span className="dashboard__status-label">
+              Unable to refresh latest data right now. Showing the last available result.
+            </span>
           ) : null}
         </aside>
-      </div>
+      </header>
 
-      <div className="dashboard__section">
-        <h2 className="dashboard__section-title">Overview</h2>
-        <div className="dashboard__grid">
-          {data.metrics.map((metric) => (
-            <MetricCard key={metric.label} metric={metric} />
-          ))}
-        </div>
-      </div>
-
-      <div className="dashboard__section" id="tracks">
-        <h2 className="dashboard__section-title">Top Tracks</h2>
-        <TopTrackList tracks={data.topTracks} />
-      </div>
-
-      <BottomNav />
+      {isOverview ? (
+        <nav className="dashboard__period-nav" aria-label="Report period navigation">
+          {state.data.reports.map((report) => {
+            const keyMetric = report.metrics[0];
+            return (
+              <Link
+                key={report.period}
+                href={`/reports/${report.period}`}
+                className="dashboard__period-link glass"
+              >
+                <span className="dashboard__period-chip">{PERIOD_LABELS[report.period]}</span>
+                <h2 className="dashboard__period-title">{report.heading}</h2>
+                <p className="dashboard__period-copy">{report.subheading}</p>
+                {keyMetric ? (
+                  <p className="dashboard__period-metric">
+                    {keyMetric.label}: {keyMetric.value}
+                  </p>
+                ) : null}
+              </Link>
+            );
+          })}
+        </nav>
+      ) : (
+        <>
+          <nav className="dashboard__tabs" aria-label="Choose report period">
+            {state.data.reports.map((report) => (
+              <Link
+                key={report.period}
+                href={`/reports/${report.period}`}
+                className={`dashboard__tab${
+                  report.period === activeReport?.period ? " dashboard__tab--active" : ""
+                }`}
+              >
+                {PERIOD_LABELS[report.period]}
+              </Link>
+            ))}
+          </nav>
+          {activeReport ? (
+            <article className="dashboard__section" aria-labelledby="report-heading">
+              <div className="dashboard__section-head">
+                <h2 id="report-heading" className="dashboard__section-title">
+                  {activeReport.heading}
+                </h2>
+                <p className="dashboard__section-copy">{activeReport.subheading}</p>
+              </div>
+              <div className="dashboard__grid">
+                {activeReport.metrics.map((metric) => (
+                  <MetricCard key={`${activeReport.period}-${metric.label}`} metric={metric} />
+                ))}
+              </div>
+              <div className="dashboard__report-grid">
+                <section className="dashboard__list-card glass" aria-labelledby="top-track-heading">
+                  <h3 id="top-track-heading" className="dashboard__list-title">
+                    Top Tracks
+                  </h3>
+                  <TopTrackList tracks={activeReport.topTracks} />
+                </section>
+                <section className="dashboard__list-card glass" aria-labelledby="top-album-heading">
+                  <h3 id="top-album-heading" className="dashboard__list-title">
+                    Top Albums
+                  </h3>
+                  <TopAlbumList albums={activeReport.topAlbums} />
+                </section>
+                <section className="dashboard__list-card glass" aria-labelledby="top-artist-heading">
+                  <h3 id="top-artist-heading" className="dashboard__list-title">
+                    Top Artists
+                  </h3>
+                  <TopArtistList artists={activeReport.topArtists} />
+                </section>
+              </div>
+            </article>
+          ) : (
+            <p className="dashboard__section-copy">No report found for this period.</p>
+          )}
+        </>
+      )}
     </section>
   );
 }

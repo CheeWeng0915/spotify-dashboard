@@ -1,304 +1,176 @@
-type SpotifyConfig = {
-  clientId: string;
-  hasClientSecret: boolean;
-  appUrl: string;
-  isConfigured: boolean;
-  redirectUri: string;
-};
+import { createHash, randomBytes, timingSafeEqual } from "crypto";
 
-import { getMockDashboardData } from "@/lib/mock-dashboard";
-import type { DashboardData, TopTrack } from "@/types/dashboard";
+export const SPOTIFY_AUTHORIZE_URL = "https://accounts.spotify.com/authorize";
+export const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
+export const SPOTIFY_API_BASE_URL = "https://api.spotify.com/v1";
 
-export const SPOTIFY_AUTH_STATE_COOKIE = "spotify_auth_state";
-export const SPOTIFY_SESSION_COOKIE = "spotify_session";
-
-const spotifyScopes = [
-  "user-read-private",
+const DEFAULT_APP_URL = "http://127.0.0.1:3000";
+const DEFAULT_SCOPES = [
   "user-read-email",
+  "user-read-private",
   "user-top-read",
-  "user-library-read",
+  "user-read-recently-played",
 ];
 
-type SpotifyTokenResponse = {
-  access_token: string;
-  token_type: string;
-  scope: string;
-  expires_in: number;
-  refresh_token?: string;
+type SpotifyConfigOptions = {
+  strict?: boolean;
 };
 
-export type SpotifySession = {
-  accessToken: string;
-  tokenType: string;
-  scope: string;
-  expiresAt: number;
-  refreshToken?: string;
+export type SpotifyConfig = {
+  clientId: string;
+  appUrl: string;
+  isConfigured: boolean;
+  missing: string[];
+  redirectUri: string;
+  scopes: string[];
 };
 
-type SpotifyImage = {
-  url: string;
-};
+export class SpotifyConfigError extends Error {
+  missing: string[];
 
-type SpotifyProfile = {
-  display_name?: string;
-  email?: string;
-  external_urls?: {
-    spotify?: string;
-  };
-  followers?: {
-    total?: number;
-  };
-  images?: SpotifyImage[];
-  product?: string;
-};
-
-type SpotifyTrack = {
-  name: string;
-  popularity?: number;
-  external_urls?: {
-    spotify?: string;
-  };
-  album: {
-    name: string;
-    images?: SpotifyImage[];
-  };
-  artists: Array<{
-    name: string;
-  }>;
-};
-
-type SpotifyTopTracksResponse = {
-  items: SpotifyTrack[];
-};
-
-type SpotifySavedTracksResponse = {
-  total: number;
-};
-
-function getAppUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL ?? "http://127.0.0.1:3000";
+  constructor(missing: string[]) {
+    super(`Missing Spotify configuration: ${missing.join(", ")}`);
+    this.name = "SpotifyConfigError";
+    this.missing = missing;
+  }
 }
 
-export function isSpotifyConfigured() {
-  return Boolean(
-    process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET,
+export function getAppUrl() {
+  return (process.env.APP_URL ?? DEFAULT_APP_URL).replace(/\/$/, "");
+}
+
+function getFirstHeaderValue(value: string | null) {
+  return value?.split(",")[0]?.trim();
+}
+
+function isLocalHost(host: string) {
+  const hostname = host.split(":")[0]?.toLowerCase();
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+}
+
+function inferRequestProtocol(
+  requestUrl: URL,
+  host: string,
+  forwardedProto?: string,
+) {
+  if (!isLocalHost(host)) {
+    return "https";
+  }
+
+  if (forwardedProto === "https" || forwardedProto === "http") {
+    return forwardedProto;
+  }
+
+  if (requestUrl.protocol === "https:") {
+    return "https";
+  }
+
+  return isLocalHost(host) ? "http" : "https";
+}
+
+export function getRequestOrigin(request: Request) {
+  const requestUrl = new URL(request.url);
+  const forwardedHost = getFirstHeaderValue(
+    request.headers.get("x-forwarded-host"),
   );
-}
+  const forwardedProto = getFirstHeaderValue(
+    request.headers.get("x-forwarded-proto"),
+  );
 
-export function getSpotifyConfig(): SpotifyConfig {
-  return {
-    clientId: process.env.SPOTIFY_CLIENT_ID ?? "",
-    hasClientSecret: Boolean(process.env.SPOTIFY_CLIENT_SECRET),
-    appUrl: getAppUrl(),
-    isConfigured: isSpotifyConfigured(),
-    redirectUri: `${getAppUrl()}/api/auth/callback/spotify`,
-  };
+  if (forwardedHost) {
+    const protocol = inferRequestProtocol(
+      requestUrl,
+      forwardedHost,
+      forwardedProto,
+    );
+    return `${protocol}://${forwardedHost}`;
+  }
+
+  const host = getFirstHeaderValue(request.headers.get("host"));
+
+  if (host) {
+    const protocol = inferRequestProtocol(requestUrl, host, forwardedProto);
+    return `${protocol}://${host}`;
+  }
+
+  return requestUrl.origin;
 }
 
 export function getSpotifyScopes() {
-  return spotifyScopes.join(" ");
+  return (process.env.SPOTIFY_SCOPES ?? DEFAULT_SCOPES.join(" "))
+    .split(/\s+/)
+    .map((scope) => scope.trim())
+    .filter(Boolean);
 }
 
-export function createSpotifyAuthState() {
-  return crypto.randomUUID();
+export function getSpotifyConfig(
+  options: SpotifyConfigOptions = {},
+): SpotifyConfig {
+  const appUrl = getAppUrl();
+  const clientId = process.env.SPOTIFY_CLIENT_ID ?? "";
+  const sessionSecret = process.env.SPOTIFY_SESSION_SECRET ?? "";
+  const missing = [
+    ["SPOTIFY_CLIENT_ID", clientId],
+    ["SPOTIFY_SESSION_SECRET", sessionSecret],
+    ["APP_URL", appUrl],
+  ]
+    .filter(([, value]) => !value)
+    .map(([name]) => name);
+
+  if (options.strict && missing.length > 0) {
+    throw new SpotifyConfigError(missing);
+  }
+
+  return {
+    clientId,
+    appUrl,
+    isConfigured: missing.length === 0,
+    missing,
+    redirectUri: `${appUrl}/api/auth/callback/spotify`,
+    scopes: getSpotifyScopes(),
+  };
 }
 
-export function buildSpotifyAuthorizeUrl(state: string) {
-  const config = getSpotifyConfig();
-  const authorizeUrl = new URL("https://accounts.spotify.com/authorize");
+export function isSpotifyConfigured() {
+  return getSpotifyConfig().isConfigured;
+}
 
-  authorizeUrl.searchParams.set("client_id", config.clientId);
-  authorizeUrl.searchParams.set("response_type", "code");
-  authorizeUrl.searchParams.set("redirect_uri", config.redirectUri);
-  authorizeUrl.searchParams.set("state", state);
-  authorizeUrl.searchParams.set("scope", getSpotifyScopes());
+export function createRandomString(byteLength = 32) {
+  return randomBytes(byteLength).toString("base64url");
+}
+
+export function createCodeChallenge(codeVerifier: string) {
+  return createHash("sha256").update(codeVerifier).digest("base64url");
+}
+
+export function createSpotifyAuthorizeUrl(params: {
+  state: string;
+  codeChallenge: string;
+  redirectUri?: string;
+}) {
+  const config = getSpotifyConfig({ strict: true });
+  const authorizeUrl = new URL(SPOTIFY_AUTHORIZE_URL);
+  const redirectUri = params.redirectUri ?? config.redirectUri;
+
+  authorizeUrl.search = new URLSearchParams({
+    client_id: config.clientId,
+    response_type: "code",
+    redirect_uri: redirectUri,
+    scope: config.scopes.join(" "),
+    state: params.state,
+    code_challenge_method: "S256",
+    code_challenge: params.codeChallenge,
+  }).toString();
 
   return authorizeUrl;
 }
 
-export function serializeSpotifySession(session: SpotifySession) {
-  return Buffer.from(JSON.stringify(session), "utf8").toString("base64url");
-}
+export function timingSafeStringEqual(left: string, right: string) {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
 
-export function parseSpotifySession(value?: string) {
-  if (!value) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(
-      Buffer.from(value, "base64url").toString("utf8"),
-    ) as SpotifySession;
-  } catch {
-    return null;
-  }
-}
-
-export function getCookieOptions(maxAge: number) {
-  return {
-    httpOnly: true,
-    maxAge,
-    path: "/",
-    sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
-  };
-}
-
-export async function exchangeCodeForSpotifySession(code: string) {
-  const config = getSpotifyConfig();
-  const body = new URLSearchParams({
-    code,
-    grant_type: "authorization_code",
-    redirect_uri: config.redirectUri,
-  });
-
-  const response = await fetch("https://accounts.spotify.com/api/token", {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${Buffer.from(
-        `${config.clientId}:${process.env.SPOTIFY_CLIENT_SECRET ?? ""}`,
-      ).toString("base64")}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body,
-  });
-
-  if (!response.ok) {
-    throw new Error(`Spotify token exchange failed with ${response.status}`);
-  }
-
-  const token = (await response.json()) as SpotifyTokenResponse;
-
-  return {
-    accessToken: token.access_token,
-    tokenType: token.token_type,
-    scope: token.scope,
-    expiresAt: Date.now() + token.expires_in * 1000,
-    refreshToken: token.refresh_token,
-  } satisfies SpotifySession;
-}
-
-async function fetchSpotify<T>(session: SpotifySession, path: string) {
-  const response = await fetch(`https://api.spotify.com/v1${path}`, {
-    headers: {
-      Authorization: `Bearer ${session.accessToken}`,
-    },
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error(`Spotify API request failed with ${response.status}`);
-  }
-
-  return (await response.json()) as T;
-}
-
-function formatNumber(value?: number) {
-  return new Intl.NumberFormat("en", {
-    notation: "compact",
-    maximumFractionDigits: 1,
-  }).format(value ?? 0);
-}
-
-function buildFallbackDashboard(message: string, isConfigured = isSpotifyConfigured()) {
-  const data = getMockDashboardData();
-
-  return {
-    ...data,
-    connection: {
-      ...data.connection,
-      isConfigured,
-      message,
-    },
-  };
-}
-
-export async function getDashboardData(session: SpotifySession | null) {
-  if (!isSpotifyConfigured()) {
-    return buildFallbackDashboard(
-      "Add Spotify credentials, then connect your account.",
-      false,
-    );
-  }
-
-  if (!session) {
-    return buildFallbackDashboard(
-      "Spotify credentials are ready. Connect your account to load live data.",
-      true,
-    );
-  }
-
-  if (Date.now() >= session.expiresAt) {
-    return buildFallbackDashboard(
-      "Your Spotify session expired. Connect again to refresh live data.",
-      true,
-    );
-  }
-
-  try {
-    const [profile, topTracks, savedTracks] = await Promise.all([
-      fetchSpotify<SpotifyProfile>(session, "/me"),
-      fetchSpotify<SpotifyTopTracksResponse>(
-        session,
-        "/me/top/tracks?limit=5&time_range=medium_term",
-      ),
-      fetchSpotify<SpotifySavedTracksResponse>(session, "/me/tracks?limit=1"),
-    ]);
-
-    const tracks: TopTrack[] = topTracks.items.map((track) => ({
-      title: track.name,
-      artist: track.artists.map((artist) => artist.name).join(", "),
-      album: track.album.name,
-      detail: `Popularity ${track.popularity ?? 0}/100`,
-      imageUrl: track.album.images?.[0]?.url,
-      spotifyUrl: track.external_urls?.spotify,
-    }));
-
-    return {
-      metrics: [
-        {
-          label: "Saved tracks",
-          value: formatNumber(savedTracks.total),
-          delta: "From your library",
-          description: "Total tracks saved to your Spotify account.",
-        },
-        {
-          label: "Top tracks",
-          value: String(topTracks.items.length),
-          delta: "Medium-term taste",
-          description: "Tracks loaded from your recent Spotify listening profile.",
-        },
-        {
-          label: "Followers",
-          value: formatNumber(profile.followers?.total),
-          delta: profile.product ? `${profile.product} account` : "Spotify profile",
-          description: "Public follower count from your Spotify profile.",
-        },
-      ],
-      topTracks: tracks,
-      connection: {
-        isConfigured: true,
-        isConnected: true,
-        isLive: true,
-        displayName: profile.display_name ?? profile.email ?? "Spotify listener",
-        profileUrl: profile.external_urls?.spotify,
-        avatarUrl: profile.images?.[0]?.url,
-        product: profile.product,
-        message: "Live Spotify data is connected.",
-      },
-    } satisfies DashboardData;
-  } catch {
-    const data = buildFallbackDashboard(
-      "Spotify connected, but live data could not load. Showing mock data.",
-      true,
-    );
-
-    return {
-      ...data,
-      connection: {
-        ...data.connection,
-        isConnected: true,
-      },
-    };
-  }
+  return (
+    leftBuffer.length === rightBuffer.length &&
+    timingSafeEqual(leftBuffer, rightBuffer)
+  );
 }

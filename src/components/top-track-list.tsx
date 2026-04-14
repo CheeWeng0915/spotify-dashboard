@@ -5,35 +5,41 @@ type TopTrackListProps = {
 };
 
 export function TopTrackList({ tracks }: TopTrackListProps) {
+  if (tracks.length === 0) {
+    return <div className="track-list__empty">No track data yet.</div>;
+  }
+
   return (
-    <div className="track-list">
+    <ol className="track-list" aria-label="Top tracks list">
       {tracks.map((track, index) => (
-        <a
-          key={`${track.title}-${track.artist}`}
-          className="track-list__item"
-          href={track.spotifyUrl ?? "#tracks"}
-          target={track.spotifyUrl ? "_blank" : undefined}
-          rel={track.spotifyUrl ? "noreferrer" : undefined}
-        >
+        <li key={`${track.title}-${track.artist}-${index}`} className="track-list__item">
           <div className="track-list__rank">{index + 1}</div>
-          {track.imageUrl ? (
-            <img
-              className="track-list__image"
-              src={track.imageUrl}
-              alt={`${track.album} cover`}
-            />
-          ) : (
-            <div className="track-list__image track-list__image--empty" />
-          )}
+          <div className="track-list__media">
+            {track.imageUrl ? (
+              <img
+                className="track-list__image"
+                src={track.imageUrl}
+                alt={`${track.title} cover`}
+                loading="lazy"
+              />
+            ) : (
+              <span className="track-list__placeholder" aria-hidden>
+                {track.title.charAt(0).toUpperCase()}
+              </span>
+            )}
+          </div>
           <div>
             <h3 className="track-list__title">{track.title}</h3>
             <p className="track-list__meta">
               {track.artist} · {track.album}
             </p>
           </div>
-          <div className="track-list__detail">{track.detail}</div>
-        </a>
+          <div className="track-list__stats">
+            <div className="track-list__plays">{track.plays}</div>
+            <div className="track-list__duration">{track.duration}</div>
+          </div>
+        </li>
       ))}
-    </div>
+    </ol>
   );
 }

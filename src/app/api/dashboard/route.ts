@@ -1,20 +1,171 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { getMockDashboardData } from "@/lib/mock-dashboard";
 import {
+  getCurrentSpotifyProfile,
+  getCurrentUserTopArtists,
+  getCurrentUserRecentlyPlayed,
+  getCurrentUserTopTracks,
+  refreshSpotifyAccessToken,
+} from "@/lib/spotify-api";
+import type { SpotifyRecentlyPlayedItem } from "@/lib/spotify-api";
+import { createDashboardDataFromSpotify } from "@/lib/spotify-dashboard";
+import { getSpotifyConfig } from "@/lib/spotify";
+import {
+  getSpotifySessionCookieMaxAge,
   SPOTIFY_SESSION_COOKIE,
-  getDashboardData,
-  parseSpotifySession,
-} from "@/lib/spotify";
+  createSpotifySession,
+  isSpotifySessionExpired,
+  isSpotifySessionHardExpired,
+  sealSpotifySession,
+  unsealSpotifySession,
+} from "@/lib/spotify-session";
+
+const RECENTLY_PLAYED_PAGE_LIMIT = 50;
+const MAX_RECENTLY_PLAYED_REQUESTS = 20;
+const YEAR_WINDOW_MS = 365 * 24 * 60 * 60 * 1000;
+const TOP_ITEMS_LIMIT = 50;
+
+async function getRecentlyPlayedHistory(accessToken: string, nowMs = Date.now()) {
+  const cutoffMs = nowMs - YEAR_WINDOW_MS;
+  const collected: SpotifyRecentlyPlayedItem[] = [];
+  let before: number | undefined;
+
+  for (let page = 0; page < MAX_RECENTLY_PLAYED_REQUESTS; page += 1) {
+    const response = await getCurrentUserRecentlyPlayed(accessToken, {
+      limit: RECENTLY_PLAYED_PAGE_LIMIT,
+      before,
+    });
+
+    if (response.items.length === 0) {
+      break;
+    }
+
+    collected.push(...response.items);
+    const oldestItem = response.items[response.items.length - 1];
+    const oldestPlayedAt = Date.parse(oldestItem.played_at);
+
+    if (
+      Number.isNaN(oldestPlayedAt) ||
+      oldestPlayedAt < cutoffMs ||
+      response.items.length < RECENTLY_PLAYED_PAGE_LIMIT
+    ) {
+      break;
+    }
+
+    before = oldestPlayedAt - 1;
+  }
+
+  return collected;
+}
 
 export async function GET() {
+  const config = getSpotifyConfig();
   const cookieStore = await cookies();
-  const session = parseSpotifySession(
-    cookieStore.get(SPOTIFY_SESSION_COOKIE)?.value,
-  );
-  const data = await getDashboardData(session);
+  const sealedSession = cookieStore.get(SPOTIFY_SESSION_COOKIE)?.value;
+  const session = sealedSession ? unsealSpotifySession(sealedSession) : null;
 
-  return NextResponse.json({
-    data,
-    spotifyConfigured: data.connection.isConfigured,
-  });
+  if (!session || isSpotifySessionHardExpired(session)) {
+    const response = NextResponse.json({
+      data: getMockDashboardData(),
+      spotifyConfigured: config.isConfigured,
+      spotifyAuthenticated: false,
+      source: "mock",
+    });
+
+    if (session) {
+      response.cookies.delete(SPOTIFY_SESSION_COOKIE);
+    }
+
+    return response;
+  }
+
+  try {
+    let activeSession = session;
+    let refreshed = false;
+
+    if (isSpotifySessionExpired(session)) {
+      if (!session.refreshToken) {
+        throw new Error("Missing refresh token.");
+      }
+
+      activeSession = createSpotifySession(
+        await refreshSpotifyAccessToken(session.refreshToken),
+        session.refreshToken,
+        session.sessionExpiresAt,
+      );
+      refreshed = true;
+    }
+
+    const [
+      profile,
+      shortTermTopTracks,
+      mediumTermTopTracks,
+      longTermTopTracks,
+      shortTermTopArtists,
+      mediumTermTopArtists,
+      longTermTopArtists,
+      recentlyPlayed,
+    ] = await Promise.all([
+        getCurrentSpotifyProfile(activeSession.accessToken),
+        getCurrentUserTopTracks(activeSession.accessToken, "short_term", TOP_ITEMS_LIMIT),
+        getCurrentUserTopTracks(activeSession.accessToken, "medium_term", TOP_ITEMS_LIMIT),
+        getCurrentUserTopTracks(activeSession.accessToken, "long_term", TOP_ITEMS_LIMIT),
+        getCurrentUserTopArtists(activeSession.accessToken, "short_term", TOP_ITEMS_LIMIT),
+        getCurrentUserTopArtists(activeSession.accessToken, "medium_term", TOP_ITEMS_LIMIT),
+        getCurrentUserTopArtists(activeSession.accessToken, "long_term", TOP_ITEMS_LIMIT),
+        getRecentlyPlayedHistory(activeSession.accessToken).catch(
+          () => [] as SpotifyRecentlyPlayedItem[],
+        ),
+      ]);
+    const response = NextResponse.json({
+      data: createDashboardDataFromSpotify({
+        profile,
+        topTracks: {
+          shortTerm: shortTermTopTracks,
+          mediumTerm: mediumTermTopTracks,
+          longTerm: longTermTopTracks,
+        },
+        topArtists: {
+          shortTerm: shortTermTopArtists,
+          mediumTerm: mediumTermTopArtists,
+          longTerm: longTermTopArtists,
+        },
+        recentlyPlayed,
+      }),
+      spotifyConfigured: config.isConfigured,
+      spotifyAuthenticated: true,
+      source: "spotify",
+    });
+
+    if (refreshed) {
+      const maxAge = getSpotifySessionCookieMaxAge(activeSession);
+
+      response.cookies.set(
+        SPOTIFY_SESSION_COOKIE,
+        sealSpotifySession(activeSession),
+        {
+          httpOnly: true,
+          maxAge,
+          path: "/",
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
+        },
+      );
+    }
+
+    return response;
+  } catch {
+    const response = NextResponse.json({
+      data: getMockDashboardData(),
+      spotifyConfigured: config.isConfigured,
+      spotifyAuthenticated: false,
+      source: "mock",
+      error: "spotify_fetch_failed",
+    });
+
+    response.cookies.delete(SPOTIFY_SESSION_COOKIE);
+
+    return response;
+  }
 }
