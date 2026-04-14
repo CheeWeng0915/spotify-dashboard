@@ -1,0 +1,46 @@
+import { notFound, redirect } from "next/navigation";
+import { LibraryShell } from "@/components/library-shell";
+import { getInitialDashboardShellProps } from "@/lib/dashboard-page";
+import type { LibraryCategory, ListeningPeriod } from "@/types/dashboard";
+
+type LibraryPageFactoryConfig = {
+  periods: ListeningPeriod[];
+  categories: LibraryCategory[];
+};
+
+type LibraryPageProps = {
+  params: Promise<{
+    category: string;
+    period: string;
+  }>;
+};
+
+export function createLibraryPage(config: LibraryPageFactoryConfig) {
+  return async function LibraryPage({ params }: LibraryPageProps) {
+    const { category, period } = await params;
+
+    if (!config.categories.includes(category as LibraryCategory)) {
+      notFound();
+    }
+
+    if (!config.periods.includes(period as ListeningPeriod)) {
+      notFound();
+    }
+
+    const initialProps = await getInitialDashboardShellProps();
+
+    if (!initialProps.spotifyAuthenticated) {
+      redirect(`/connect?next=/library/${category}/${period}`);
+    }
+
+    return (
+      <main>
+        <LibraryShell
+          {...initialProps}
+          category={category as LibraryCategory}
+          period={period as ListeningPeriod}
+        />
+      </main>
+    );
+  };
+}
