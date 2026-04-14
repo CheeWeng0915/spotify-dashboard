@@ -2,17 +2,90 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_ITEMS } from "@/components/liquid-navbar/config";
-import { useNavIndicator } from "@/components/liquid-navbar/use-nav-indicator";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
 import { useDashboardProfileState } from "@/components/use-dashboard-state";
+
+const NAV_ITEMS = [
+  {
+    href: "/",
+    label: "Overview",
+    isActive: (pathname: string) => pathname === "/",
+  },
+  {
+    href: "/reports/daily",
+    label: "Reports",
+    isActive: (pathname: string) => pathname.startsWith("/reports/"),
+  },
+  {
+    href: "/library/artists/daily",
+    label: "Artists",
+    isActive: (pathname: string) => pathname.startsWith("/library/artists"),
+  },
+  {
+    href: "/library/albums/daily",
+    label: "Albums",
+    isActive: (pathname: string) => pathname.startsWith("/library/albums"),
+  },
+];
 
 export function LiquidNavbar() {
   const pathname = usePathname();
+  const linkRefs = useRef<Array<HTMLAnchorElement | null>>([]);
+  const indicatorRef = useRef<HTMLSpanElement | null>(null);
   const profileState = useDashboardProfileState();
-  const { indicatorRef, linkRefs, moveIndicatorTo } = useNavIndicator({
-    pathname,
-    items: NAV_ITEMS,
-  });
+  const activeIndex = useMemo(
+    () => NAV_ITEMS.findIndex((item) => item.isActive(pathname)),
+    [pathname],
+  );
+
+  const moveIndicatorTo = useCallback((index: number) => {
+    const linkElement = linkRefs.current[index];
+    const indicatorElement = indicatorRef.current;
+
+    if (!linkElement || !indicatorElement) {
+      return;
+    }
+
+    indicatorElement.style.setProperty(
+      "--site-nav-indicator-x",
+      `${linkElement.offsetLeft}px`,
+    );
+    indicatorElement.style.setProperty(
+      "--site-nav-indicator-width",
+      `${linkElement.offsetWidth}px`,
+    );
+    indicatorElement.classList.add("site-nav__indicator--visible");
+  }, []);
+
+  useEffect(() => {
+    if (activeIndex < 0) {
+      indicatorRef.current?.classList.remove("site-nav__indicator--visible");
+      return;
+    }
+
+    moveIndicatorTo(activeIndex);
+  }, [activeIndex, moveIndicatorTo]);
+
+  useEffect(() => {
+    if (activeIndex < 0) {
+      return;
+    }
+
+    const handleResize = () => {
+      moveIndicatorTo(activeIndex);
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [activeIndex, moveIndicatorTo]);
 
   return (
     <header className="site-nav-wrap">

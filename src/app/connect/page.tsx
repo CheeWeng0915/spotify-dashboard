@@ -5,8 +5,6 @@ import { getInitialDashboardShellProps } from "@/lib/dashboard-page";
 type ConnectPageProps = {
   searchParams: Promise<{
     next?: string;
-    spotify?: string;
-    reason?: string;
   }>;
 };
 
@@ -21,8 +19,6 @@ function getSafeNextPath(nextPath: string | undefined) {
 export default async function ConnectPage({ searchParams }: ConnectPageProps) {
   const params = await searchParams;
   const nextPath = getSafeNextPath(params.next);
-  const spotifyStatus = params.spotify;
-  const spotifyReason = params.reason;
   const initialProps = await getInitialDashboardShellProps();
 
   if (initialProps.spotifyAuthenticated) {
@@ -50,12 +46,6 @@ export default async function ConnectPage({ searchParams }: ConnectPageProps) {
               Back to overview
             </Link>
           </div>
-          {spotifyStatus === "error" ? (
-            <p className="dashboard__status-label">
-              Spotify connection failed
-              {spotifyReason ? ` (${spotifyReason})` : ""}. Please retry.
-            </p>
-          ) : null}
           {!initialProps.spotifyConfigured ? (
             <p className="dashboard__status-label">
               Spotify environment variables are not configured yet.

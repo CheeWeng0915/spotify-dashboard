@@ -3,7 +3,6 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypt
 export const SPOTIFY_AUTH_STATE_COOKIE = "spotify_auth_state";
 export const SPOTIFY_CODE_VERIFIER_COOKIE = "spotify_code_verifier";
 export const SPOTIFY_POST_AUTH_REDIRECT_COOKIE = "spotify_post_auth_redirect";
-export const SPOTIFY_OAUTH_REDIRECT_URI_COOKIE = "spotify_oauth_redirect_uri";
 export const SPOTIFY_SESSION_COOKIE = "spotify_session";
 export const SPOTIFY_TEMP_COOKIE_MAX_AGE = 10 * 60;
 export const SPOTIFY_SESSION_COOKIE_MAX_AGE = 30 * 24 * 60 * 60;
@@ -16,7 +15,6 @@ export type SpotifySession = {
   tokenType: string;
   scope: string;
   expiresAt: number;
-  sessionExpiresAt: number;
 };
 
 type SpotifyTokenLike = {
@@ -40,60 +38,18 @@ function getSessionKey() {
 export function createSpotifySession(
   token: SpotifyTokenLike,
   previousRefreshToken?: string,
-  sessionExpiresAt?: number,
 ): SpotifySession {
-  const now = Date.now();
-
   return {
     accessToken: token.access_token,
     refreshToken: token.refresh_token ?? previousRefreshToken,
     tokenType: token.token_type,
     scope: token.scope ?? "",
-    expiresAt: now + Math.max(token.expires_in - 60, 0) * 1000,
-    sessionExpiresAt:
-      sessionExpiresAt ?? now + SPOTIFY_SESSION_COOKIE_MAX_AGE * 1000,
+    expiresAt: Date.now() + Math.max(token.expires_in - 60, 0) * 1000,
   };
 }
 
-export function isSpotifySessionExpired(
-  session: SpotifySession,
-  now = Date.now(),
-) {
-  return session.expiresAt <= now;
-}
-
-export function isSpotifySessionHardExpired(
-  session: SpotifySession,
-  now = Date.now(),
-) {
-  return session.sessionExpiresAt <= now;
-}
-
-export function getSpotifySessionCookieMaxAge(
-  session: SpotifySession,
-  now = Date.now(),
-) {
-  return Math.max(0, Math.floor((session.sessionExpiresAt - now) / 1000));
-}
-
-function isValidSpotifySession(value: unknown): value is SpotifySession {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const candidate = value as Partial<SpotifySession>;
-
-  return (
-    typeof candidate.accessToken === "string" &&
-    (typeof candidate.refreshToken === "string" ||
-      typeof candidate.refreshToken === "undefined") &&
-    typeof candidate.tokenType === "string" &&
-    typeof candidate.scope === "string" &&
-    typeof candidate.expiresAt === "number" &&
-    Number.isFinite(candidate.expiresAt) &&
-    typeof candidate.sessionExpiresAt === "number" &&
-    Number.isFinite(candidate.sessionExpiresAt)
-  );
+export function isSpotifySessionExpired(session: SpotifySession) {
+  return session.expiresAt <= Date.now();
 }
 
 export function sealSpotifySession(session: SpotifySession) {
@@ -134,13 +90,7 @@ export function unsealSpotifySession(value: string): SpotifySession | null {
       decipher.final(),
     ]);
 
-    const parsed = JSON.parse(decrypted.toString("utf8")) as unknown;
-
-    if (!isValidSpotifySession(parsed)) {
-      return null;
-    }
-
-    return parsed;
+    return JSON.parse(decrypted.toString("utf8")) as SpotifySession;
   } catch {
     return null;
   }

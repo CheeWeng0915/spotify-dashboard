@@ -1,13 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { exchangeSpotifyCodeForToken } from "@/lib/spotify-api";
-import { timingSafeStringEqual } from "@/lib/spotify";
+import { getAppUrl, timingSafeStringEqual } from "@/lib/spotify";
 import {
-  getSpotifySessionCookieMaxAge,
   SPOTIFY_AUTH_STATE_COOKIE,
   SPOTIFY_CODE_VERIFIER_COOKIE,
-  SPOTIFY_OAUTH_REDIRECT_URI_COOKIE,
   SPOTIFY_POST_AUTH_REDIRECT_COOKIE,
   SPOTIFY_SESSION_COOKIE,
+  SPOTIFY_SESSION_COOKIE_MAX_AGE,
   createSpotifySession,
   sealSpotifySession,
 } from "@/lib/spotify-session";
@@ -21,12 +20,11 @@ function getSafeRedirectPath(path: string | undefined) {
 }
 
 function createRedirectResponse(
-  requestUrl: URL,
   path: string,
   status: "connected" | "error",
   reason?: string,
 ) {
-  const url = new URL(path, requestUrl.origin);
+  const url = new URL(path, getAppUrl());
   url.searchParams.set("spotify", status);
 
   if (reason) {
@@ -40,12 +38,10 @@ function clearTemporaryCookies(response: NextResponse) {
   response.cookies.delete(SPOTIFY_AUTH_STATE_COOKIE);
   response.cookies.delete(SPOTIFY_CODE_VERIFIER_COOKIE);
   response.cookies.delete(SPOTIFY_POST_AUTH_REDIRECT_COOKIE);
-  response.cookies.delete(SPOTIFY_OAUTH_REDIRECT_URI_COOKIE);
 }
 
 export async function GET(request: NextRequest) {
-  const requestUrl = new URL(request.url);
-  const { searchParams } = requestUrl;
+  const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const state = searchParams.get("state");
   const error = searchParams.get("error");
@@ -54,61 +50,34 @@ export async function GET(request: NextRequest) {
   const postAuthRedirectPath = getSafeRedirectPath(
     request.cookies.get(SPOTIFY_POST_AUTH_REDIRECT_COOKIE)?.value,
   );
-  const callbackRedirectUri = request.cookies.get(
-    SPOTIFY_OAUTH_REDIRECT_URI_COOKIE,
-  )?.value;
   const secure = process.env.NODE_ENV === "production";
 
   if (error) {
-    const response = createRedirectResponse(
-      requestUrl,
-      "/",
-      "error",
-      "spotify_denied",
-    );
+    const response = createRedirectResponse("/", "error", "spotify_denied");
     clearTemporaryCookies(response);
     return response;
   }
 
   if (!code || !state || !expectedState || !codeVerifier) {
-    const response = createRedirectResponse(
-      requestUrl,
-      "/",
-      "error",
-      "missing_oauth_state",
-    );
+    const response = createRedirectResponse("/", "error", "missing_oauth_state");
     clearTemporaryCookies(response);
     return response;
   }
 
   if (!timingSafeStringEqual(state, expectedState)) {
-    const response = createRedirectResponse(
-      requestUrl,
-      "/",
-      "error",
-      "invalid_oauth_state",
-    );
+    const response = createRedirectResponse("/", "error", "invalid_oauth_state");
     clearTemporaryCookies(response);
     return response;
   }
 
   try {
-    const now = Date.now();
-    const token = await exchangeSpotifyCodeForToken(
-      code,
-      codeVerifier,
-      callbackRedirectUri,
-    );
-    const session = createSpotifySession(token, undefined, now + 24 * 60 * 60 * 1000);
-    const response = createRedirectResponse(
-      requestUrl,
-      postAuthRedirectPath,
-      "connected",
-    );
+    const token = await exchangeSpotifyCodeForToken(code, codeVerifier);
+    const session = createSpotifySession(token);
+    const response = createRedirectResponse(postAuthRedirectPath, "connected");
 
     response.cookies.set(SPOTIFY_SESSION_COOKIE, sealSpotifySession(session), {
       httpOnly: true,
-      maxAge: getSpotifySessionCookieMaxAge(session, now),
+      maxAge: SPOTIFY_SESSION_COOKIE_MAX_AGE,
       path: "/",
       sameSite: "lax",
       secure,
@@ -117,12 +86,7 @@ export async function GET(request: NextRequest) {
 
     return response;
   } catch {
-    const response = createRedirectResponse(
-      requestUrl,
-      "/",
-      "error",
-      "token_exchange_failed",
-    );
+    const response = createRedirectResponse("/", "error", "token_exchange_failed");
     clearTemporaryCookies(response);
     return response;
   }

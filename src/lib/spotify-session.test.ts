@@ -1,8 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   createSpotifySession,
-  getSpotifySessionCookieMaxAge,
-  isSpotifySessionHardExpired,
   isSpotifySessionExpired,
   sealSpotifySession,
   unsealSpotifySession,
@@ -47,47 +45,13 @@ describe("spotify session", () => {
   });
 
   it("detects expired sessions", () => {
-    const now = Date.now();
-
     expect(
       isSpotifySessionExpired({
         accessToken: "access-token",
         tokenType: "Bearer",
         scope: "",
-        expiresAt: now - 1,
-        sessionExpiresAt: now + 1000,
+        expiresAt: Date.now() - 1,
       }),
     ).toBe(true);
-  });
-
-  it("expires hard session at fixed deadline", () => {
-    const now = Date.now();
-
-    expect(
-      isSpotifySessionHardExpired({
-        accessToken: "access-token",
-        tokenType: "Bearer",
-        scope: "",
-        expiresAt: now + 1000,
-        sessionExpiresAt: now - 1,
-      }),
-    ).toBe(true);
-  });
-
-  it("computes cookie max-age from remaining hard session time", () => {
-    const now = Date.now();
-
-    expect(
-      getSpotifySessionCookieMaxAge(
-        {
-          accessToken: "access-token",
-          tokenType: "Bearer",
-          scope: "",
-          expiresAt: now + 60_000,
-          sessionExpiresAt: now + 4_500,
-        },
-        now,
-      ),
-    ).toBe(4);
   });
 });
