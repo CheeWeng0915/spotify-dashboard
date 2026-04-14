@@ -9,6 +9,7 @@ import {
   refreshSpotifyAccessToken,
 } from "@/lib/spotify-api";
 import type {
+  SpotifyProfile,
   SpotifyRecentlyPlayedItem,
   SpotifyTopArtistsResponse,
   SpotifyTopTracksResponse,
@@ -24,6 +25,7 @@ import {
   sealSpotifySession,
   unsealSpotifySession,
 } from "@/lib/spotify-session";
+import type { DashboardData, ListeningPeriod } from "@/types/dashboard";
 
 const RECENTLY_PLAYED_PAGE_LIMIT = 50;
 const MAX_RECENTLY_PLAYED_REQUESTS = 20;
@@ -42,16 +44,50 @@ function pickImageUrl(images: Array<{ url: string }> | undefined) {
   return images?.[0]?.url;
 }
 
-function createConnectedFallbackData(
-  profile: Awaited<ReturnType<typeof getCurrentSpotifyProfile>>,
-) {
-  const data = getMockDashboardData();
+function createConnectedFallbackData(profile: SpotifyProfile): DashboardData {
+  const periods: ListeningPeriod[] = ["daily", "weekly", "monthly", "yearly"];
 
   return {
-    ...data,
+    generatedAt: new Date().toISOString(),
     profileName: profile.display_name ?? profile.id,
     profileImageUrl: pickImageUrl(profile.images),
     profileUrl: profile.external_urls?.spotify,
+    reports: periods.map((period) => ({
+      period,
+      heading:
+        period === "daily"
+          ? "Daily Report"
+          : period === "weekly"
+            ? "Weekly Report"
+            : period === "monthly"
+              ? "Monthly Report"
+              : "Yearly Report (Wrapped Style)",
+      subheading:
+        "Spotify is connected, but report data could not be loaded right now.",
+      metrics: [
+        {
+          label: "Listening Time",
+          value: "No data",
+          delta: "Spotify connected",
+          description: "Waiting for Spotify report access to become available.",
+        },
+        {
+          label: "Play Count",
+          value: "No data",
+          delta: "No sample data shown",
+          description: "This app will not mix mock reports into a connected account.",
+        },
+        {
+          label: period === "yearly" ? "Song of the Year" : "Most Played Song",
+          value: "No data",
+          delta: "Try again soon",
+          description: "Reconnect if Spotify keeps returning an authorization error.",
+        },
+      ],
+      topTracks: [],
+      topArtists: [],
+      topAlbums: [],
+    })),
   };
 }
 
@@ -232,7 +268,7 @@ export async function GET() {
         data: createConnectedFallbackData(profile),
         spotifyConfigured: config.isConfigured,
         spotifyAuthenticated: true,
-        source: "mock",
+        source: "spotify",
         error: "spotify_fetch_failed",
       });
     } catch (profileError) {
