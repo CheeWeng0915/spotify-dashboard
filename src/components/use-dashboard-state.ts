@@ -2,22 +2,20 @@
 
 import { useEffect, useState } from "react";
 import type { DashboardData } from "@/types/dashboard";
-
-type DashboardSource = "mock" | "spotify";
-
-type DashboardPayload = {
-  data: DashboardData;
-  spotifyConfigured: boolean;
-  spotifyAuthenticated: boolean;
-  source: DashboardSource;
-  error?: string;
-};
+import type {
+  DashboardAuthReason,
+  DashboardAuthState,
+  DashboardPayload,
+  DashboardSource,
+} from "@/types/dashboard-api";
 
 type DashboardState = {
   data: DashboardData;
   spotifyConfigured: boolean;
   spotifyAuthenticated: boolean;
   source: DashboardSource;
+  authState: DashboardAuthState;
+  reason?: DashboardAuthReason;
   fetchError: boolean;
 };
 
@@ -31,6 +29,10 @@ type UseDashboardStateInput = {
   data: DashboardData;
   spotifyConfigured: boolean;
   spotifyAuthenticated: boolean;
+  source?: DashboardSource;
+  authState?: DashboardAuthState;
+  reason?: DashboardAuthReason;
+  requireSpotifyConnection?: boolean;
 };
 
 let cachedDashboardPayload: DashboardPayload | null = null;
@@ -99,6 +101,10 @@ export function useDashboardState({
   data,
   spotifyConfigured,
   spotifyAuthenticated,
+  source = "mock",
+  authState,
+  reason,
+  requireSpotifyConnection = false,
 }: UseDashboardStateInput) {
   const cachedPayload = readCachedDashboardPayload();
   const [state, setState] = useState<DashboardState>(() =>
@@ -111,7 +117,9 @@ export function useDashboardState({
           data,
           spotifyConfigured,
           spotifyAuthenticated,
-          source: "mock",
+          source,
+          authState: authState ?? (spotifyAuthenticated ? "connected" : "not_connected"),
+          reason,
           fetchError: false,
         },
   );
@@ -132,8 +140,24 @@ export function useDashboardState({
           spotifyConfigured: payload.spotifyConfigured,
           spotifyAuthenticated: payload.spotifyAuthenticated,
           source: payload.source,
+          authState: payload.authState,
+          reason: payload.reason,
           fetchError: Boolean(payload.error),
         });
+
+        if (requireSpotifyConnection && payload.authState === "needs_reauth") {
+          const nextPath = `${window.location.pathname}${window.location.search}`;
+          const connectUrl = new URL("/connect", window.location.origin);
+
+          connectUrl.searchParams.set("next", nextPath || "/");
+          connectUrl.searchParams.set("spotify", "error");
+
+          if (payload.reason) {
+            connectUrl.searchParams.set("reason", payload.reason);
+          }
+
+          window.location.replace(connectUrl.toString());
+        }
       } catch {
         if (!active) {
           return;
@@ -151,7 +175,7 @@ export function useDashboardState({
     return () => {
       active = false;
     };
-  }, []);
+  }, [requireSpotifyConnection]);
 
   return state;
 }

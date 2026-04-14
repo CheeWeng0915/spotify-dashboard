@@ -10,11 +10,15 @@ import type {
   LibraryCategory,
   ListeningPeriod,
 } from "@/types/dashboard";
+import type { DashboardAuthReason, DashboardAuthState, DashboardSource } from "@/types/dashboard-api";
 
 type LibraryShellProps = {
   data: DashboardData;
   spotifyConfigured: boolean;
   spotifyAuthenticated: boolean;
+  source?: DashboardSource;
+  authState?: DashboardAuthState;
+  reason?: DashboardAuthReason;
   category: LibraryCategory;
   period: ListeningPeriod;
 };
@@ -37,6 +41,9 @@ export function LibraryShell({
   data,
   spotifyConfigured,
   spotifyAuthenticated,
+  source,
+  authState,
+  reason,
   category,
   period,
 }: LibraryShellProps) {
@@ -44,10 +51,17 @@ export function LibraryShell({
     data,
     spotifyConfigured,
     spotifyAuthenticated,
+    source,
+    authState,
+    reason,
+    requireSpotifyConnection: true,
   });
 
   const activeReport = state.data.reports.find((report) => report.period === period);
-  const statusText = state.spotifyAuthenticated
+  const requiresReconnect = state.authState === "needs_reauth";
+  const statusText = requiresReconnect
+    ? "Spotify session is no longer valid. Reconnect to continue."
+    : state.spotifyAuthenticated
     ? "Spotify account connected"
     : state.spotifyConfigured
       ? "Connect Spotify from the dedicated connect page to unlock reports."
@@ -85,7 +99,10 @@ export function LibraryShell({
             <a className="dashboard__api" href="/api/dashboard">
               Open `/api/dashboard`
             </a>
-            <Link className="dashboard__api dashboard__api--ghost" href="/connect">
+            <Link
+              className="dashboard__api dashboard__api--ghost"
+              href={`/connect?next=/library/${category}/${period}`}
+            >
               Connect page
             </Link>
             <Link className="dashboard__api dashboard__api--ghost" href="/">
@@ -107,7 +124,7 @@ export function LibraryShell({
           <span className="dashboard__status-label">
             Source: {sourceLabel} · Updated: {generatedAtLabel}
           </span>
-          {state.spotifyAuthenticated && state.source === "spotify" ? (
+          {state.spotifyAuthenticated && !requiresReconnect && state.source === "spotify" ? (
             <Link className="dashboard__status-account" href="/profile">
               {state.data.profileImageUrl ? (
                 <img
@@ -124,6 +141,16 @@ export function LibraryShell({
                 Current account: {state.data.profileName}
               </span>
             </Link>
+          ) : null}
+          {requiresReconnect ? (
+            <span className="dashboard__status-label">
+              Reconnect is required before library insights can load.
+            </span>
+          ) : null}
+          {state.authState === "transient_error" ? (
+            <span className="dashboard__status-label">
+              Spotify is temporarily unavailable. Showing sample data until Spotify recovers.
+            </span>
           ) : null}
           {state.fetchError ? (
             <span className="dashboard__status-label">

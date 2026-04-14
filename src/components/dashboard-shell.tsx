@@ -8,11 +8,15 @@ import { TopArtistList } from "@/components/top-artist-list";
 import { TopTrackList } from "@/components/top-track-list";
 import { useDashboardState } from "@/components/use-dashboard-state";
 import type { DashboardData, ListeningPeriod } from "@/types/dashboard";
+import type { DashboardAuthReason, DashboardAuthState, DashboardSource } from "@/types/dashboard-api";
 
 type DashboardShellProps = {
   data: DashboardData;
   spotifyConfigured: boolean;
   spotifyAuthenticated: boolean;
+  source?: DashboardSource;
+  authState?: DashboardAuthState;
+  reason?: DashboardAuthReason;
   period?: ListeningPeriod;
 };
 
@@ -27,15 +31,26 @@ export function DashboardShell({
   data,
   spotifyConfigured,
   spotifyAuthenticated,
+  source,
+  authState,
+  reason,
   period,
 }: DashboardShellProps) {
   const state = useDashboardState({
     data,
     spotifyConfigured,
     spotifyAuthenticated,
+    source,
+    authState,
+    reason,
+    requireSpotifyConnection: Boolean(period),
   });
+  const requiresReconnect = state.authState === "needs_reauth";
+  const connectHref = period ? `/connect?next=/reports/${period}` : "/connect";
 
-  const statusText = state.spotifyAuthenticated
+  const statusText = requiresReconnect
+    ? "Spotify session is no longer valid. Reconnect to continue."
+    : state.spotifyAuthenticated
     ? "Spotify account connected"
     : state.spotifyConfigured
       ? "Connect Spotify from the dedicated connect page to unlock reports."
@@ -86,12 +101,12 @@ export function DashboardShell({
             {statusText}
           </span>
           <div className="dashboard__actions">
-            {state.spotifyAuthenticated ? (
+            {state.spotifyAuthenticated && !requiresReconnect ? (
               <Link className="dashboard__button dashboard__button--secondary" href="/profile">
                 Open profile
               </Link>
             ) : (
-              <Link className="dashboard__button" href="/connect">
+              <Link className="dashboard__button" href={connectHref}>
                 Connect Spotify
               </Link>
             )}
@@ -99,7 +114,7 @@ export function DashboardShell({
           <span className="dashboard__status-label">
             Source: {sourceLabel} · Updated: {generatedAtLabel}
           </span>
-          {state.spotifyAuthenticated && state.source === "spotify" ? (
+          {state.spotifyAuthenticated && !requiresReconnect && state.source === "spotify" ? (
             <Link className="dashboard__status-account" href="/profile">
               {state.data.profileImageUrl ? (
                 <img
@@ -116,6 +131,16 @@ export function DashboardShell({
                 Current account: {state.data.profileName}
               </span>
             </Link>
+          ) : null}
+          {requiresReconnect ? (
+            <span className="dashboard__status-label">
+              Reconnect is required before we can load your Spotify data.
+            </span>
+          ) : null}
+          {state.authState === "transient_error" ? (
+            <span className="dashboard__status-label">
+              Spotify is temporarily unavailable. Showing sample data until Spotify recovers.
+            </span>
           ) : null}
           {state.fetchError ? (
             <span className="dashboard__status-label">
