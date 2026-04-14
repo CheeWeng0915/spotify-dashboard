@@ -9,7 +9,12 @@ import {
   refreshSpotifyAccessToken,
   SpotifyApiError,
 } from "@/lib/spotify-api";
-import type { SpotifyRecentlyPlayedItem } from "@/lib/spotify-api";
+import type {
+  SpotifyProfile,
+  SpotifyRecentlyPlayedItem,
+  SpotifyTopArtistsResponse,
+  SpotifyTopTracksResponse,
+} from "@/lib/spotify-api";
 import { createDashboardDataFromSpotify } from "@/lib/spotify-dashboard";
 import { getSpotifyConfig } from "@/lib/spotify";
 import type {
@@ -26,6 +31,7 @@ import {
   sealSpotifySession,
   unsealSpotifySession,
 } from "@/lib/spotify-session";
+import type { DashboardData, ListeningPeriod } from "@/types/dashboard";
 
 const RECENTLY_PLAYED_PAGE_LIMIT = 50;
 const MAX_RECENTLY_PLAYED_REQUESTS = 20;
@@ -150,6 +156,19 @@ async function getRecentlyPlayedHistory(accessToken: string, nowMs = Date.now())
   return collected;
 }
 
+async function withSpotifyFallback<T>(
+  label: string,
+  request: Promise<T>,
+  fallback: T,
+) {
+  try {
+    return await request;
+  } catch (error) {
+    console.error(`spotify_optional_fetch_failed:${label}`, error);
+    return fallback;
+  }
+}
+
 export async function GET() {
   const config = getSpotifyConfig();
   const cookieStore = await cookies();
@@ -226,7 +245,6 @@ export async function GET() {
 
   try {
     const [
-      profile,
       shortTermTopTracks,
       mediumTermTopTracks,
       longTermTopTracks,
@@ -235,15 +253,40 @@ export async function GET() {
       longTermTopArtists,
       recentlyPlayed,
     ] = await Promise.all([
-        getCurrentSpotifyProfile(activeSession.accessToken),
-        getCurrentUserTopTracks(activeSession.accessToken, "short_term", TOP_ITEMS_LIMIT),
-        getCurrentUserTopTracks(activeSession.accessToken, "medium_term", TOP_ITEMS_LIMIT),
-        getCurrentUserTopTracks(activeSession.accessToken, "long_term", TOP_ITEMS_LIMIT),
-        getCurrentUserTopArtists(activeSession.accessToken, "short_term", TOP_ITEMS_LIMIT),
-        getCurrentUserTopArtists(activeSession.accessToken, "medium_term", TOP_ITEMS_LIMIT),
-        getCurrentUserTopArtists(activeSession.accessToken, "long_term", TOP_ITEMS_LIMIT),
-        getRecentlyPlayedHistory(activeSession.accessToken).catch(
-          () => [] as SpotifyRecentlyPlayedItem[],
+        withSpotifyFallback(
+          "top_tracks_short_term",
+          getCurrentUserTopTracks(activeSession.accessToken, "short_term", TOP_ITEMS_LIMIT),
+          EMPTY_TOP_TRACKS,
+        ),
+        withSpotifyFallback(
+          "top_tracks_medium_term",
+          getCurrentUserTopTracks(activeSession.accessToken, "medium_term", TOP_ITEMS_LIMIT),
+          EMPTY_TOP_TRACKS,
+        ),
+        withSpotifyFallback(
+          "top_tracks_long_term",
+          getCurrentUserTopTracks(activeSession.accessToken, "long_term", TOP_ITEMS_LIMIT),
+          EMPTY_TOP_TRACKS,
+        ),
+        withSpotifyFallback(
+          "top_artists_short_term",
+          getCurrentUserTopArtists(activeSession.accessToken, "short_term", TOP_ITEMS_LIMIT),
+          EMPTY_TOP_ARTISTS,
+        ),
+        withSpotifyFallback(
+          "top_artists_medium_term",
+          getCurrentUserTopArtists(activeSession.accessToken, "medium_term", TOP_ITEMS_LIMIT),
+          EMPTY_TOP_ARTISTS,
+        ),
+        withSpotifyFallback(
+          "top_artists_long_term",
+          getCurrentUserTopArtists(activeSession.accessToken, "long_term", TOP_ITEMS_LIMIT),
+          EMPTY_TOP_ARTISTS,
+        ),
+        withSpotifyFallback(
+          "recently_played",
+          getRecentlyPlayedHistory(activeSession.accessToken),
+          [] as SpotifyRecentlyPlayedItem[],
         ),
       ]);
     return createJsonResponse(
