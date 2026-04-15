@@ -48,7 +48,7 @@ A Next.js Spotify analytics dashboard that shows your listening trends across da
    ```bash
    npm run dev
    ```
-4. Open `http://127.0.0.1:3000`.
+4. Open `http://localhost:3000`.
 
 ## Environment Variables
 
