@@ -1,0 +1,69 @@
+# Spotify Dashboard
+
+A Next.js Spotify analytics dashboard that shows your listening trends across daily, weekly, monthly, and yearly periods.
+
+## Features
+
+- Spotify OAuth connection flow
+- Overview dashboard with listening summaries
+- Period-based reports (`daily`, `weekly`, `monthly`, `yearly`)
+- Library views for top artists and albums
+- Profile view for connected Spotify account
+- Fallback sample data when Spotify is unavailable
+
+## Pages
+
+- `/` — Dashboard overview
+- `/reports/[period]` — Period report pages
+- `/library/[category]/[period]` — Library pages (`artists` or `albums`)
+- `/profile` — Connected account profile
+- `/connect` — Spotify connection page
+
+## API Routes
+
+- `/api/auth/spotify` — Start Spotify OAuth
+- `/api/auth/callback/spotify` — OAuth callback handler
+- `/api/auth/logout` — Clear Spotify session
+- `/api/dashboard` — Dashboard data endpoint
+- `/api/health` — Health check endpoint
+
+## Tech Stack
+
+- Next.js (App Router)
+- React + TypeScript
+- Vitest
+- ESLint
+
+## Setup
+
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Copy environment file and configure values:
+   ```bash
+   cp .env.example .env.local
+   ```
+3. Run development server:
+   ```bash
+   npm run dev
+   ```
+4. Open `http://127.0.0.1:3000`.
+
+## Environment Variables
+
+Defined in `.env.example`:
+
+- `APP_URL`
+- `SPOTIFY_CLIENT_ID`
+- `SPOTIFY_CLIENT_SECRET`
+- `SPOTIFY_SESSION_SECRET`
+- `SPOTIFY_SCOPES`
+
+## Scripts
+
+- `npm run dev` — Start dev server
+- `npm run lint` — Run ESLint
+- `npm run test` — Run Vitest tests
+- `npm run build` — Build production app
+- `npm run start` — Start production server
