@@ -39,6 +39,7 @@ vi.mock("@/lib/spotify-api", async () => {
     ...actual,
     refreshSpotifyAccessToken: vi.fn(),
     getCurrentSpotifyProfile: vi.fn(),
+    getCurrentUserCurrentlyPlaying: vi.fn(),
     getCurrentUserTopTracks: vi.fn(),
     getCurrentUserTopArtists: vi.fn(),
     getCurrentUserRecentlyPlayed: vi.fn(),
@@ -53,6 +54,7 @@ import { cookies } from "next/headers";
 import { GET } from "@/app/api/dashboard/route";
 import {
   getCurrentSpotifyProfile,
+  getCurrentUserCurrentlyPlaying,
   getCurrentUserRecentlyPlayed,
   getCurrentUserTopArtists,
   getCurrentUserTopTracks,
@@ -81,6 +83,7 @@ const mockedSealSpotifySession = vi.mocked(sealSpotifySession);
 const mockedGetSpotifySessionCookieMaxAge = vi.mocked(getSpotifySessionCookieMaxAge);
 const mockedRefreshSpotifyAccessToken = vi.mocked(refreshSpotifyAccessToken);
 const mockedGetCurrentSpotifyProfile = vi.mocked(getCurrentSpotifyProfile);
+const mockedGetCurrentUserCurrentlyPlaying = vi.mocked(getCurrentUserCurrentlyPlaying);
 const mockedGetCurrentUserTopTracks = vi.mocked(getCurrentUserTopTracks);
 const mockedGetCurrentUserTopArtists = vi.mocked(getCurrentUserTopArtists);
 const mockedGetCurrentUserRecentlyPlayed = vi.mocked(getCurrentUserRecentlyPlayed);
@@ -153,6 +156,7 @@ describe("/api/dashboard", () => {
       id: "connected-listener",
       images: [],
     });
+    mockedGetCurrentUserCurrentlyPlaying.mockResolvedValue(null);
     mockedGetCurrentUserTopTracks.mockResolvedValue({
       items: [],
     });

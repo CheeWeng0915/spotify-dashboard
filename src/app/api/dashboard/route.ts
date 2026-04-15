@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { getMockDashboardData } from "@/lib/mock-dashboard";
 import {
   getCurrentSpotifyProfile,
+  getCurrentUserCurrentlyPlaying,
   getCurrentUserTopArtists,
   getCurrentUserRecentlyPlayed,
   getCurrentUserTopTracks,
@@ -10,7 +11,7 @@ import {
   SpotifyApiError,
 } from "@/lib/spotify-api";
 import type {
-  SpotifyProfile,
+  SpotifyCurrentlyPlayingResponse,
   SpotifyRecentlyPlayedItem,
   SpotifyTopArtistsResponse,
   SpotifyTopTracksResponse,
@@ -31,7 +32,6 @@ import {
   sealSpotifySession,
   unsealSpotifySession,
 } from "@/lib/spotify-session";
-import type { DashboardData, ListeningPeriod } from "@/types/dashboard";
 
 const RECENTLY_PLAYED_PAGE_LIMIT = 50;
 const MAX_RECENTLY_PLAYED_REQUESTS = 20;
@@ -43,6 +43,7 @@ const EMPTY_TOP_TRACKS: SpotifyTopTracksResponse = {
 const EMPTY_TOP_ARTISTS: SpotifyTopArtistsResponse = {
   items: [],
 };
+const EMPTY_CURRENTLY_PLAYING: SpotifyCurrentlyPlayingResponse | null = null;
 
 function createMockPayload(options: {
   spotifyConfigured: boolean;
@@ -259,6 +260,7 @@ export async function GET() {
       mediumTermTopArtists,
       longTermTopArtists,
       recentlyPlayed,
+      currentlyPlaying,
     ] = await Promise.all([
         getCurrentSpotifyProfile(activeSession.accessToken),
         withSpotifyFallback(
@@ -296,6 +298,11 @@ export async function GET() {
           getRecentlyPlayedHistory(activeSession.accessToken),
           [] as SpotifyRecentlyPlayedItem[],
         ),
+        withSpotifyFallback(
+          "currently_playing",
+          getCurrentUserCurrentlyPlaying(activeSession.accessToken),
+          EMPTY_CURRENTLY_PLAYING,
+        ),
       ]);
     return createJsonResponse(
       {
@@ -312,6 +319,7 @@ export async function GET() {
             longTerm: longTermTopArtists,
           },
           recentlyPlayed,
+          currentlyPlaying,
         }),
         spotifyConfigured: config.isConfigured,
         spotifyAuthenticated: true,

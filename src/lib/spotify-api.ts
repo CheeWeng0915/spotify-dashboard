@@ -85,6 +85,26 @@ export type SpotifyRecentlyPlayedResponse = {
   next?: string | null;
 };
 
+export type SpotifyCurrentlyPlayingResponse = {
+  currently_playing_type?: string;
+  is_playing: boolean;
+  progress_ms?: number;
+  item?: {
+    id?: string;
+    name: string;
+    duration_ms: number;
+    album: {
+      id?: string;
+      name: string;
+      images?: SpotifyImage[];
+    };
+    artists: Array<{
+      id?: string;
+      name: string;
+    }>;
+  } | null;
+};
+
 export type SpotifyTimeRange = "short_term" | "medium_term" | "long_term";
 
 export class SpotifyApiError extends Error {
@@ -223,6 +243,13 @@ export function getCurrentUserRecentlyPlayed(
 
   return spotifyFetch<SpotifyRecentlyPlayedResponse>(
     `/me/player/recently-played?${query.toString()}`,
+    accessToken,
+  );
+}
+
+export function getCurrentUserCurrentlyPlaying(accessToken: string) {
+  return spotifyFetch<SpotifyCurrentlyPlayingResponse | null>(
+    "/me/player/currently-playing",
     accessToken,
   );
 }

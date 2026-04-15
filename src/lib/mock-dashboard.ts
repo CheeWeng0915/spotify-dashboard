@@ -4,6 +4,14 @@ export function getMockDashboardData(): DashboardData {
   return {
     generatedAt: new Date("2026-01-01T12:00:00.000Z").toISOString(),
     profileName: "Spotify Sample Listener",
+    nowPlaying: {
+      title: "Saturn",
+      artist: "SZA",
+      album: "Saturn",
+      isPlaying: true,
+      progressMs: 74_000,
+      durationMs: 206_000,
+    },
     reports: [
       {
         period: "daily",

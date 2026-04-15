@@ -44,10 +44,21 @@ export type ListeningReport = {
   topAlbums: TopAlbum[];
 };
 
+export type NowPlayingTrack = {
+  title: string;
+  artist: string;
+  album: string;
+  imageUrl?: string;
+  isPlaying: boolean;
+  progressMs?: number;
+  durationMs?: number;
+};
+
 export type DashboardData = {
   generatedAt: string;
   profileName: string;
   profileImageUrl?: string;
   profileUrl?: string;
+  nowPlaying?: NowPlayingTrack;
   reports: ListeningReport[];
 };
