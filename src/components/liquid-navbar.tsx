@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_ITEMS } from "@/components/liquid-navbar/config";
-import { useNavIndicator } from "@/components/liquid-navbar/use-nav-indicator";
+import { getNavItems } from "@/components/liquid-navbar/config";
+import { useDashboardProfileState } from "@/components/use-dashboard-state";
 
 function NavIcon({ label }: { label: string }) {
-  if (label === "Tracks") {
+  if (label === "Reports") {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true" className="site-nav__icon">
         <path d="M9 18.5A3.5 3.5 0 1 1 7 15.34V5.5c0-.48.34-.9.81-.98l10-1.8A1 1 0 0 1 19 3.7v11.8a3.5 3.5 0 1 1-2-3.16V7.3l-8 1.44v9.76Z" />
@@ -22,6 +22,14 @@ function NavIcon({ label }: { label: string }) {
     );
   }
 
+  if (label === "Profile") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className="site-nav__icon">
+        <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z" />
+      </svg>
+    );
+  }
+
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="site-nav__icon">
       <path d="M4 13h7V4H4v9Zm0 7h7v-5H4v5Zm9 0h7v-9h-7v9Zm0-16v5h7V4h-7Z" />
@@ -29,39 +37,60 @@ function NavIcon({ label }: { label: string }) {
   );
 }
 
-export function LiquidNavbar() {
+type LiquidNavbarProps = {
+  spotifyAuthenticated: boolean;
+};
+
+export function LiquidNavbar({ spotifyAuthenticated }: LiquidNavbarProps) {
   const pathname = usePathname();
-  const { indicatorRef, linkRefs, moveIndicatorTo } = useNavIndicator({
-    pathname,
-    items: NAV_ITEMS,
-  });
+  const navItems = getNavItems(spotifyAuthenticated);
+  const profileState = useDashboardProfileState();
+
+  const profileName = profileState.profileName || "Spotify User";
+  const profileInitial = profileName.charAt(0).toUpperCase();
 
   return (
     <header className="site-nav-wrap">
       <nav className="site-nav" aria-label="Primary">
-        <span ref={indicatorRef} aria-hidden="true" className="site-nav__indicator" />
         <div className="site-nav__links">
-          {NAV_ITEMS.map((item, index) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              ref={(element) => {
-                linkRefs.current[index] = element;
-              }}
-              className={`site-nav__link${
-                item.isActive(pathname) ? " site-nav__link--active" : ""
-              }`}
-              onPointerDown={() => {
-                moveIndicatorTo(index);
-              }}
-              onFocus={() => {
-                moveIndicatorTo(index);
-              }}
-            >
-              <NavIcon label={item.label} />
-              <span>{item.label}</span>
-            </Link>
-          ))}
+          {navItems.map((item) => {
+            const isActive = item.isActive(pathname);
+            const isProfileItem = item.label === "Profile";
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`site-nav__link${
+                  isActive ? " site-nav__link--active" : ""
+                }${isProfileItem ? " site-nav__link--avatar" : ""}`}
+                aria-current={isActive ? "page" : undefined}
+                aria-label={isProfileItem ? "Profile" : undefined}
+              >
+                {isProfileItem ? (
+                  <>
+                    {profileState.profileImageUrl ? (
+                      <img
+                        className="site-nav__avatar-image"
+                        src={profileState.profileImageUrl}
+                        alt={`${profileName} avatar`}
+                      />
+                    ) : (
+                      <span className="site-nav__avatar-fallback" aria-hidden>
+                        {profileInitial}
+                      </span>
+                    )}
+                    <span className="site-nav__sr-only">Profile</span>
+                  </>
+                ) : (
+                  <>
+                    <NavIcon label={item.label} />
+                    <span>{item.label}</span>
+                  </>
+                )}
+              </Link>
+            );
+          })}
         </div>
       </nav>
     </header>

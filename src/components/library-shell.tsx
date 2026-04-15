@@ -89,6 +89,7 @@ export function LibraryShell({
     <section className="dashboard" aria-label="Artist and album leaderboard">
       <header className="dashboard__hero glass">
         <div>
+          <span className="dashboard__eyebrow">Library</span>
           <h1 className="dashboard__title">
             {CATEGORY_LABELS[category]} · {PERIOD_LABELS[period]}
           </h1>

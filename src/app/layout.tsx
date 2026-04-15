@@ -1,5 +1,11 @@
+import { cookies } from "next/headers";
 import type { Metadata } from "next";
 import { LiquidNavbar } from "@/components/liquid-navbar";
+import {
+  isSpotifySessionHardExpired,
+  SPOTIFY_SESSION_COOKIE,
+  unsealSpotifySession,
+} from "@/lib/spotify-session";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -12,14 +18,32 @@ type RootLayoutProps = Readonly<{
 }>;
 
 export default function RootLayout({ children }: RootLayoutProps) {
+  const cookieStorePromise = cookies();
+
   return (
     <html lang="en">
       <body>
-        <div className="app-shell">
-          <LiquidNavbar />
-          {children}
-        </div>
+        <LayoutContent cookieStorePromise={cookieStorePromise}>{children}</LayoutContent>
       </body>
     </html>
+  );
+}
+
+type LayoutContentProps = {
+  cookieStorePromise: ReturnType<typeof cookies>;
+  children: React.ReactNode;
+};
+
+async function LayoutContent({ cookieStorePromise, children }: LayoutContentProps) {
+  const cookieStore = await cookieStorePromise;
+  const sessionCookie = cookieStore.get(SPOTIFY_SESSION_COOKIE)?.value;
+  const session = sessionCookie ? unsealSpotifySession(sessionCookie) : null;
+  const spotifyAuthenticated = Boolean(session && !isSpotifySessionHardExpired(session));
+
+  return (
+    <div className="app-shell">
+      <LiquidNavbar spotifyAuthenticated={spotifyAuthenticated} />
+      {children}
+    </div>
   );
 }

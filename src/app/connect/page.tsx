@@ -30,10 +30,10 @@ export default async function ConnectPage({ searchParams }: ConnectPageProps) {
       <section className="dashboard">
         <article className="connect-card glass">
           <span className="dashboard__eyebrow">Spotify Access</span>
-          <h1 className="dashboard__title">Connect Spotify to continue</h1>
+          <h1 className="dashboard__title">Connect Once. Unlock Everything.</h1>
           <p className="dashboard__copy">
-            Reports are available only for connected accounts. Connect once to unlock
-            tracks, albums, artists, and profile pages.
+            Securely connect your Spotify account to unlock reports, library views,
+            and profile insights across every time period.
           </p>
           <div className="dashboard__inline-actions">
             <a
