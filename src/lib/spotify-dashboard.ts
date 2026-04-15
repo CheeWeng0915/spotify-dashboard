@@ -1,4 +1,5 @@
 import type {
+  SpotifyCurrentlyPlayingResponse,
   SpotifyProfile,
   SpotifyRecentlyPlayedItem,
   SpotifyTopArtistsResponse,
@@ -49,6 +50,28 @@ function buildArtistImageLookup(response: SpotifyTopArtistsResponse) {
   return imageByName;
 }
 
+function buildNowPlayingTrack(
+  currentlyPlaying: SpotifyCurrentlyPlayingResponse | null | undefined,
+): DashboardData["nowPlaying"] {
+  if (!currentlyPlaying || currentlyPlaying.currently_playing_type !== "track") {
+    return undefined;
+  }
+
+  if (!currentlyPlaying.item) {
+    return undefined;
+  }
+
+  return {
+    title: currentlyPlaying.item.name,
+    artist: currentlyPlaying.item.artists.map((artist) => artist.name).join(", "),
+    album: currentlyPlaying.item.album.name,
+    imageUrl: pickImageUrl(currentlyPlaying.item.album.images),
+    isPlaying: currentlyPlaying.is_playing,
+    progressMs: currentlyPlaying.progress_ms,
+    durationMs: currentlyPlaying.item.duration_ms,
+  };
+}
+
 type SpotifyDashboardInput = {
   profile: SpotifyProfile;
   topTracks: {
@@ -62,6 +85,7 @@ type SpotifyDashboardInput = {
     longTerm: SpotifyTopArtistsResponse;
   };
   recentlyPlayed: SpotifyRecentlyPlayedItem[];
+  currentlyPlaying?: SpotifyCurrentlyPlayingResponse | null;
   now?: Date;
 };
 
@@ -544,6 +568,7 @@ export function createDashboardDataFromSpotify({
   topTracks,
   topArtists,
   recentlyPlayed,
+  currentlyPlaying,
   now = new Date(),
 }: SpotifyDashboardInput): DashboardData {
   const displayName = profile.display_name ?? profile.id;
@@ -558,6 +583,7 @@ export function createDashboardDataFromSpotify({
     profileName: displayName,
     profileImageUrl: pickImageUrl(profile.images),
     profileUrl: profile.external_urls?.spotify,
+    nowPlaying: buildNowPlayingTrack(currentlyPlaying),
     reports: [
       buildPeriodReport(
         PERIODS[0],

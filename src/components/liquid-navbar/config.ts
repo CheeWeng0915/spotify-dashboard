@@ -18,19 +18,13 @@ export function getNavItems(spotifyAuthenticated: boolean): NavbarItem[] {
     },
   ];
 
-  items.push(
-    spotifyAuthenticated
-      ? {
-          href: "/profile",
-          label: "Profile",
-          isActive: (pathname: string) => pathname.startsWith("/profile"),
-        }
-      : {
-          href: "/connect",
-          label: "Connect",
-          isActive: (pathname: string) => pathname.startsWith("/connect"),
-        },
-  );
+  if (!spotifyAuthenticated) {
+    items.push({
+      href: "/connect",
+      label: "Connect",
+      isActive: (pathname: string) => pathname.startsWith("/connect"),
+    });
+  }
 
   return items;
 }

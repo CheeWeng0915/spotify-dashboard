@@ -26,6 +26,14 @@ const PERIOD_LABELS: Record<ListeningPeriod, string> = {
   yearly: "Yearly",
 };
 
+function formatPlaybackTimestamp(durationMs: number) {
+  const totalSeconds = Math.max(0, Math.floor(durationMs / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
 export function DashboardShell({
   data,
   spotifyConfigured,
@@ -45,7 +53,6 @@ export function DashboardShell({
     requireSpotifyConnection: Boolean(period),
   });
   const requiresReconnect = state.authState === "needs_reauth";
-  const connectHref = period ? `/connect?next=/reports/${period}` : "/connect";
 
   const statusText = requiresReconnect
     ? "Spotify session is no longer valid. Reconnect to continue."
@@ -77,6 +84,13 @@ export function DashboardShell({
   const topTracks = activeReport ? activeReport.topTracks.slice(0, 10) : [];
   const topArtists = activeReport ? activeReport.topArtists.slice(0, 10) : [];
   const topAlbums = activeReport ? activeReport.topAlbums.slice(0, 10) : [];
+  const nowPlaying = state.data.nowPlaying;
+  const nowPlayingProgress =
+    typeof nowPlaying?.progressMs === "number" && typeof nowPlaying.durationMs === "number"
+      ? `${formatPlaybackTimestamp(nowPlaying.progressMs)} / ${formatPlaybackTimestamp(
+          nowPlaying.durationMs,
+        )}`
+      : null;
 
   return (
     <section className="dashboard" aria-label="Spotify reports">
@@ -88,6 +102,26 @@ export function DashboardShell({
             <p className="dashboard__copy">
               Daily to yearly listening reports, organized into clear product-like views.
             </p>
+            <div className="dashboard__now-playing" aria-live="polite">
+              <span className="dashboard__now-playing-label">Real-time playing</span>
+              {state.spotifyAuthenticated && state.source === "spotify" ? (
+                nowPlaying ? (
+                  <>
+                    <p className="dashboard__now-playing-title">{nowPlaying.title}</p>
+                    <p className="dashboard__now-playing-meta">
+                      {nowPlaying.artist} · {nowPlaying.album}
+                      {nowPlayingProgress ? ` · ${nowPlayingProgress}` : ""}
+                    </p>
+                  </>
+                ) : (
+                  <p className="dashboard__now-playing-meta">No active playback right now.</p>
+                )
+              ) : (
+                <p className="dashboard__now-playing-meta">
+                  Connect Spotify to show your current playing track.
+                </p>
+              )}
+            </div>
           </div>
 
           <aside className="dashboard__status">
@@ -98,17 +132,6 @@ export function DashboardShell({
             >
               {statusText}
             </span>
-            <div className="dashboard__actions">
-              {state.spotifyAuthenticated && !requiresReconnect ? (
-                <Link className="dashboard__button dashboard__button--secondary" href="/profile">
-                  View profile
-                </Link>
-              ) : (
-                <Link className="dashboard__button" href={connectHref}>
-                  Connect Spotify
-                </Link>
-              )}
-            </div>
             <span className="dashboard__status-label">
               Source: {sourceLabel} · Updated: {generatedAtLabel}
             </span>
