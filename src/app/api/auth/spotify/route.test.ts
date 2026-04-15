@@ -48,7 +48,7 @@ describe("/api/auth/spotify", () => {
     expect(setCookie).toContain(SPOTIFY_CODE_VERIFIER_COOKIE);
   });
 
-  it("uses forwarded host/proto for callback redirect_uri", () => {
+  it("uses configured APP_URL for callback redirect_uri", () => {
     setConfiguredEnv();
 
     const request = new Request(
@@ -64,7 +64,7 @@ describe("/api/auth/spotify", () => {
     const location = response.headers.get("location");
 
     expect(location).toContain(
-      encodeURIComponent("https://my-app.example.dev/api/auth/callback/spotify"),
+      encodeURIComponent("http://127.0.0.1:3000/api/auth/callback/spotify"),
     );
   });
 });

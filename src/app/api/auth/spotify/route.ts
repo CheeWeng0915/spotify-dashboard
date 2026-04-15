@@ -4,7 +4,7 @@ import {
   createCodeChallenge,
   createRandomString,
   createSpotifyAuthorizeUrl,
-  getRequestOrigin,
+  getSpotifyConfig,
 } from "@/lib/spotify";
 import {
   SPOTIFY_AUTH_STATE_COOKIE,
@@ -26,10 +26,7 @@ export function GET(request?: Request) {
   try {
     const url = request ? new URL(request.url) : null;
     const nextPath = getSafeRedirectPath(url?.searchParams.get("next") ?? null);
-    const requestOrigin = request ? getRequestOrigin(request) : null;
-    const callbackRedirectUri = requestOrigin
-      ? `${requestOrigin}/api/auth/callback/spotify`
-      : undefined;
+    const callbackRedirectUri = getSpotifyConfig({ strict: true }).redirectUri;
     const state = createRandomString();
     const codeVerifier = createRandomString();
     const authorizeUrl = createSpotifyAuthorizeUrl({
@@ -61,15 +58,13 @@ export function GET(request?: Request) {
       sameSite: "lax",
       secure,
     });
-    if (callbackRedirectUri) {
-      response.cookies.set(SPOTIFY_OAUTH_REDIRECT_URI_COOKIE, callbackRedirectUri, {
-        httpOnly: true,
-        maxAge: SPOTIFY_TEMP_COOKIE_MAX_AGE,
-        path: "/",
-        sameSite: "lax",
-        secure,
-      });
-    }
+    response.cookies.set(SPOTIFY_OAUTH_REDIRECT_URI_COOKIE, callbackRedirectUri, {
+      httpOnly: true,
+      maxAge: SPOTIFY_TEMP_COOKIE_MAX_AGE,
+      path: "/",
+      sameSite: "lax",
+      secure,
+    });
 
     return response;
   } catch (error) {
