@@ -80,17 +80,18 @@ export function DashboardShell({
     <section className="dashboard" aria-label="Spotify reports">
       <header className="dashboard__hero glass">
         <div>
+          <span className="dashboard__eyebrow">Spotify Intelligence</span>
           <h1 className="dashboard__title">
             {isOverview
-              ? "Spotify Dashboard Overview"
+              ? "Your Listening, Reframed"
               : activeReport?.heading ?? "Listening Report"}
           </h1>
           <p className="dashboard__copy">
             {isOverview
-              ? "View daily, weekly, monthly, and yearly listening insights in a smooth Apple-style interface."
+              ? "Daily to yearly listening reports, organized into clear product-like views."
               : activeReport?.subheading ?? "Track and album stats for this period."}
           </p>
-          </div>
+        </div>
 
         <aside className="dashboard__status">
           <span
@@ -103,7 +104,7 @@ export function DashboardShell({
           <div className="dashboard__actions">
             {state.spotifyAuthenticated && !requiresReconnect ? (
               <Link className="dashboard__button dashboard__button--secondary" href="/profile">
-                Open profile
+                View profile
               </Link>
             ) : (
               <Link className="dashboard__button" href={connectHref}>
