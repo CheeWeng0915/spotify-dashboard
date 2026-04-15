@@ -21,7 +21,6 @@
     "eslint": "latest",
     "eslint-config-next": "latest",
     "typescript": "latest",
-    "vercel": "^51.2.0",
     "vitest": "^4.1.4"
   }
 }

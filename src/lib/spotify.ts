@@ -107,6 +107,7 @@ export function getSpotifyConfig(
   options: SpotifyConfigOptions = {},
 ): SpotifyConfig {
   const appUrl = getAppUrl();
+  const configuredRedirectUri = process.env.SPOTIFY_REDIRECT_URI?.trim();
   const clientId = process.env.SPOTIFY_CLIENT_ID ?? "";
   const sessionSecret = process.env.SPOTIFY_SESSION_SECRET ?? "";
   const missing = [
@@ -126,7 +127,8 @@ export function getSpotifyConfig(
     appUrl,
     isConfigured: missing.length === 0,
     missing,
-    redirectUri: `${appUrl}/api/auth/callback/spotify`,
+    redirectUri:
+      configuredRedirectUri || `${appUrl}/api/auth/callback/spotify`,
     scopes: getSpotifyScopes(),
   };
 }
