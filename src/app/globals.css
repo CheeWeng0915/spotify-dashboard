@@ -1562,7 +1562,7 @@ button:focus-visible {
 }
 
 .search-controls__prompt {
-  color: var(--text-dim);
+  color: var(--text-muted);
   font-size: 0.84rem;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -1582,8 +1582,10 @@ button:focus-visible {
 }
 
 .search-controls__input-shell:focus-within {
-  border-color: rgba(30, 215, 96, 0.5);
-  box-shadow: 0 0 0 3px rgba(30, 215, 96, 0.2);
+  border-color: var(--primary-strong);
+  outline: 2px solid var(--text-strong);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 3px var(--primary-strong);
 }
 
 .feature-input {
@@ -1619,6 +1621,18 @@ button:focus-visible {
 .search-controls__submit:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.search-controls__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .result-list,

@@ -158,7 +158,7 @@ export function SearchShell(props: SearchShellProps) {
           }}
         >
           <label className="search-controls__prompt" htmlFor="spotify-search-query">
-            Ask Spotify
+            Search Spotify
           </label>
           <div className="search-controls__input-shell">
             <input
@@ -176,7 +176,10 @@ export function SearchShell(props: SearchShellProps) {
               disabled={!canSearch || isSearching}
               aria-label={isSearching ? "Searching Spotify" : "Search Spotify"}
             >
-              {isSearching ? "..." : "↑"}
+              <span aria-hidden="true">{isSearching ? "..." : "↑"}</span>
+              <span className="search-controls__sr-only">
+                {isSearching ? "Searching" : "Search"}
+              </span>
             </button>
           </div>
         </form>
