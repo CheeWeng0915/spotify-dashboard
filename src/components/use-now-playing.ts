@@ -42,12 +42,17 @@ export function useNowPlaying({ enabled, initialNowPlaying }: UseNowPlayingInput
           return;
         }
 
-        if (payload.authState !== "connected") {
-          setNowPlaying(undefined);
+        if (payload.authState === "connected") {
+          setNowPlaying(payload.nowPlaying);
           return;
         }
 
-        setNowPlaying(payload.nowPlaying);
+        if (
+          payload.authState === "not_connected" ||
+          payload.authState === "needs_reauth"
+        ) {
+          setNowPlaying(undefined);
+        }
       } catch {
         // Keep the previous now playing snapshot on transient fetch failures.
       }
