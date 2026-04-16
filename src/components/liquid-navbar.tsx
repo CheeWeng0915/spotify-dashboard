@@ -23,6 +23,14 @@ function NavIcon({ label }: { label: string }) {
     );
   }
 
+  if (label === "Discover") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className="site-nav__icon">
+        <path d="M12 2a10 10 0 1 0 10 10A10.01 10.01 0 0 0 12 2Zm0 18a8 8 0 1 1 8-8 8.01 8.01 0 0 1-8 8Zm0-13a1 1 0 0 0-.98.8l-1.6 8a1 1 0 0 0 1.44 1.08l5-2.5a1 1 0 0 0 .54-.64l1.6-8A1 1 0 0 0 16.56 4.66l-5 2.5A1 1 0 0 0 12 7Z" />
+      </svg>
+    );
+  }
+
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="site-nav__icon">
       <path d="M4 13h7V4H4v9Zm0 7h7v-5H4v5Zm9 0h7v-9h-7v9Zm0-16v5h7V4h-7Z" />
@@ -58,6 +66,7 @@ export function LiquidNavbar({ spotifyAuthenticated }: LiquidNavbarProps) {
   const profileState = useDashboardProfileState();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const avatarMenuRef = useRef<HTMLDivElement | null>(null);
+  const themeToggleRef = useRef<HTMLInputElement | null>(null);
 
   const profileName = profileState.profileName || "Spotify User";
   const profileInitial = profileName.charAt(0).toUpperCase();
@@ -66,6 +75,10 @@ export function LiquidNavbar({ spotifyAuthenticated }: LiquidNavbarProps) {
   useEffect(() => {
     const initialThemeMode = getInitialThemeMode();
     document.documentElement.dataset.theme = initialThemeMode;
+
+    if (themeToggleRef.current) {
+      themeToggleRef.current.checked = initialThemeMode === "dark";
+    }
   }, []);
 
   useEffect(() => {
@@ -96,10 +109,7 @@ export function LiquidNavbar({ spotifyAuthenticated }: LiquidNavbarProps) {
     };
   }, [isProfileMenuOpen]);
 
-  function toggleThemeMode() {
-    const activeThemeMode: ThemeMode =
-      document.documentElement.dataset.theme === "dark" ? "dark" : "light";
-    const nextThemeMode: ThemeMode = activeThemeMode === "dark" ? "light" : "dark";
+  function applyThemeMode(nextThemeMode: ThemeMode) {
     window.localStorage.setItem(THEME_STORAGE_KEY, nextThemeMode);
     document.documentElement.dataset.theme = nextThemeMode;
   }
@@ -108,6 +118,53 @@ export function LiquidNavbar({ spotifyAuthenticated }: LiquidNavbarProps) {
     <header className="site-nav-wrap">
       <nav className="site-nav" aria-label="Primary">
         <div className="site-nav__inner">
+          {spotifyAuthenticated ? (
+            <div className="site-nav__avatar-menu" ref={avatarMenuRef}>
+              <button
+                type="button"
+                className={`site-nav__link site-nav__link--avatar${
+                  isProfilePage ? " site-nav__link--active" : ""
+                }${isProfileMenuOpen ? " site-nav__link--open" : ""}`}
+                aria-label="User menu"
+                aria-expanded={isProfileMenuOpen}
+                aria-haspopup="menu"
+                onClick={() => {
+                  setIsProfileMenuOpen((previous) => !previous);
+                }}
+              >
+                {profileState.profileImageUrl ? (
+                  <img
+                    className="site-nav__avatar-image"
+                    src={profileState.profileImageUrl}
+                    alt={`${profileName} avatar`}
+                  />
+                ) : (
+                  <span className="site-nav__avatar-fallback" aria-hidden>
+                    {profileInitial}
+                  </span>
+                )}
+                <span className="site-nav__sr-only">Open user menu</span>
+              </button>
+              {isProfileMenuOpen ? (
+                <div className="site-nav__dropdown" role="menu" aria-label="User actions">
+                  <Link
+                    className="site-nav__dropdown-item"
+                    href="/profile"
+                    role="menuitem"
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                    }}
+                  >
+                    Profile
+                  </Link>
+                  <a className="site-nav__dropdown-item" href="/api/auth/logout" role="menuitem">
+                    Logout
+                  </a>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="site-nav__links">
             {navItems.map((item) => {
               const isActive = item.isActive(pathname);
@@ -127,62 +184,38 @@ export function LiquidNavbar({ spotifyAuthenticated }: LiquidNavbarProps) {
                 </Link>
               );
             })}
-
-            {spotifyAuthenticated ? (
-              <div className="site-nav__avatar-menu" ref={avatarMenuRef}>
-                <button
-                  type="button"
-                  className={`site-nav__link site-nav__link--avatar${
-                    isProfilePage ? " site-nav__link--active" : ""
-                  }${isProfileMenuOpen ? " site-nav__link--open" : ""}`}
-                  aria-label="User menu"
-                  aria-expanded={isProfileMenuOpen}
-                  aria-haspopup="menu"
-                  onClick={() => {
-                    setIsProfileMenuOpen((previous) => !previous);
-                  }}
-                >
-                  {profileState.profileImageUrl ? (
-                    <img
-                      className="site-nav__avatar-image"
-                      src={profileState.profileImageUrl}
-                      alt={`${profileName} avatar`}
-                    />
-                  ) : (
-                    <span className="site-nav__avatar-fallback" aria-hidden>
-                      {profileInitial}
-                    </span>
-                  )}
-                  <span className="site-nav__sr-only">Open user menu</span>
-                </button>
-                {isProfileMenuOpen ? (
-                  <div className="site-nav__dropdown" role="menu" aria-label="User actions">
-                    <Link
-                      className="site-nav__dropdown-item"
-                      href="/profile"
-                      role="menuitem"
-                      onClick={() => {
-                        setIsProfileMenuOpen(false);
-                      }}
-                    >
-                      Profile
-                    </Link>
-                    <a className="site-nav__dropdown-item" href="/api/auth/logout" role="menuitem">
-                      Logout
-                    </a>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
           </div>
-          <button
-            type="button"
-            className="site-nav__theme-toggle"
-            aria-label="Toggle dark mode"
-            onClick={toggleThemeMode}
-          >
-            Theme
-          </button>
+          {spotifyAuthenticated ? (
+            <div className="site-nav__theme-switch">
+              <input
+                id="site-theme-switch"
+                ref={themeToggleRef}
+                className="site-nav__theme-checkbox"
+                type="checkbox"
+                role="switch"
+                aria-label="Toggle dark mode"
+                onChange={(event) => {
+                  applyThemeMode(event.target.checked ? "dark" : "light");
+                }}
+              />
+              <label className="site-nav__theme-label" htmlFor="site-theme-switch">
+                <svg
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  className="site-nav__theme-icon site-nav__theme-icon--sun"
+                >
+                  <path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0-4a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V4a1 1 0 0 1 1-1Zm0 16a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1Zm9-7a1 1 0 0 1-1 1h-1a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1ZM6 12a1 1 0 0 1-1 1H4a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1Zm10.36 6.95a1 1 0 0 1 0 1.41l-.71.71a1 1 0 0 1-1.41-1.41l.71-.71a1 1 0 0 1 1.41 0ZM9.76 9.05a1 1 0 0 1 0 1.41l-.71.71a1 1 0 1 1-1.41-1.41l.71-.71a1 1 0 0 1 1.41 0Zm6.6 0 .71.71a1 1 0 0 1-1.41 1.41l-.71-.71a1 1 0 1 1 1.41-1.41Zm-6.6 9.9.71.71a1 1 0 1 1-1.41 1.41l-.71-.71a1 1 0 1 1 1.41-1.41Z" />
+                </svg>
+                <svg
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  className="site-nav__theme-icon site-nav__theme-icon--moon"
+                >
+                  <path d="M20.78 13.72A9 9 0 0 1 10.28 3.22a1 1 0 0 0-1.13-1.29A11 11 0 1 0 22.07 14.85a1 1 0 0 0-1.29-1.13Z" />
+                </svg>
+              </label>
+            </div>
+          ) : null}
         </div>
       </nav>
     </header>

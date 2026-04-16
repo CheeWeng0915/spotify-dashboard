@@ -8,7 +8,9 @@ A Next.js Spotify analytics dashboard that shows your listening trends across da
 - Overview dashboard with listening summaries
 - Period-based reports (`daily`, `weekly`, `monthly`, `yearly`)
 - Library views for top artists and albums
+- Discover page with personalized recommendations
 - Profile view for connected Spotify account
+- Real-time now playing updates on the dashboard page
 - Fallback sample data when Spotify is unavailable
 
 ## Pages
@@ -16,6 +18,7 @@ A Next.js Spotify analytics dashboard that shows your listening trends across da
 - `/` — Dashboard overview
 - `/reports/[period]` — Period report pages
 - `/library/[category]/[period]` — Library pages (`artists` or `albums`)
+- `/discover` — Personalized recommendation page
 - `/profile` — Connected account profile
 - `/connect` — Spotify connection page
 
@@ -25,6 +28,8 @@ A Next.js Spotify analytics dashboard that shows your listening trends across da
 - `/api/auth/callback/spotify` — OAuth callback handler
 - `/api/auth/logout` — Clear Spotify session
 - `/api/dashboard` — Dashboard data endpoint
+- `/api/now-playing` — Lightweight real-time now playing endpoint
+- `/api/discovery` — Discovery recommendations endpoint
 - `/api/health` — Health check endpoint
 
 ## Tech Stack
