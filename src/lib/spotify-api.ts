@@ -105,6 +105,62 @@ export type SpotifyCurrentlyPlayingResponse = {
   } | null;
 };
 
+export type SpotifyRecommendationsResponse = {
+  tracks: Array<{
+    id: string;
+    name: string;
+    duration_ms: number;
+    preview_url?: string | null;
+    album: {
+      id?: string;
+      name: string;
+      images?: SpotifyImage[];
+    };
+    artists: Array<{
+      id?: string;
+      name: string;
+    }>;
+  }>;
+};
+
+export type SpotifyArtistTopTracksResponse = {
+  tracks: Array<{
+    id: string;
+    name: string;
+    duration_ms: number;
+    popularity: number;
+    album: {
+      id?: string;
+      name: string;
+      images?: SpotifyImage[];
+    };
+    artists: Array<{
+      id?: string;
+      name: string;
+    }>;
+  }>;
+};
+
+export type SpotifySearchTracksResponse = {
+  tracks: {
+    items: Array<{
+      id: string;
+      name: string;
+      duration_ms: number;
+      popularity: number;
+      album: {
+        id?: string;
+        name: string;
+        images?: SpotifyImage[];
+      };
+      artists: Array<{
+        id?: string;
+        name: string;
+      }>;
+    }>;
+  };
+};
+
 export type SpotifyTimeRange = "short_term" | "medium_term" | "long_term";
 
 export class SpotifyApiError extends Error {
@@ -179,6 +235,7 @@ export async function spotifyFetch<T>(
   init: RequestInit = {},
 ) {
   const response = await fetch(`${SPOTIFY_API_BASE_URL}${path}`, {
+    cache: "no-store",
     ...init,
     headers: {
       Accept: "application/json",
@@ -250,6 +307,87 @@ export function getCurrentUserRecentlyPlayed(
 export function getCurrentUserCurrentlyPlaying(accessToken: string) {
   return spotifyFetch<SpotifyCurrentlyPlayingResponse | null>(
     "/me/player/currently-playing",
+    accessToken,
+  );
+}
+
+export function getSpotifyRecommendations(
+  accessToken: string,
+  options: {
+    seedArtists?: string[];
+    seedTracks?: string[];
+    seedGenres?: string[];
+    limit?: number;
+  } = {},
+) {
+  const seedArtists = (options.seedArtists ?? []).filter(Boolean).slice(0, 5);
+  const seedTracks = (options.seedTracks ?? []).filter(Boolean).slice(0, 5);
+  const seedGenres = (options.seedGenres ?? []).filter(Boolean).slice(0, 5);
+  const totalSeedCount = seedArtists.length + seedTracks.length + seedGenres.length;
+
+  if (totalSeedCount === 0) {
+    return Promise.resolve<SpotifyRecommendationsResponse>({
+      tracks: [],
+    });
+  }
+
+  const query = new URLSearchParams({
+    limit: String(Math.max(1, Math.min(options.limit ?? 20, 100))),
+  });
+
+  if (seedArtists.length > 0) {
+    query.set("seed_artists", seedArtists.join(","));
+  }
+
+  if (seedTracks.length > 0) {
+    query.set("seed_tracks", seedTracks.join(","));
+  }
+
+  if (seedGenres.length > 0) {
+    query.set("seed_genres", seedGenres.join(","));
+  }
+
+  return spotifyFetch<SpotifyRecommendationsResponse>(
+    `/recommendations?${query.toString()}`,
+    accessToken,
+  );
+}
+
+export function getArtistTopTracks(
+  accessToken: string,
+  artistId: string,
+  market = "US",
+) {
+  const query = new URLSearchParams({
+    market,
+  });
+
+  return spotifyFetch<SpotifyArtistTopTracksResponse>(
+    `/artists/${encodeURIComponent(artistId)}/top-tracks?${query.toString()}`,
+    accessToken,
+  );
+}
+
+export function searchSpotifyTracks(
+  accessToken: string,
+  queryText: string,
+  options: {
+    limit?: number;
+    market?: string;
+  } = {},
+) {
+  const query = new URLSearchParams({
+    q: queryText,
+    type: "track",
+    limit: String(Math.max(1, Math.min(options.limit ?? 20, 50))),
+  });
+
+  if (options.market) {
+    query.set("market", options.market);
+  }
+
+  return spotifyFetch<SpotifySearchTracksResponse>(
+    `/search?${query.toString()}`,
     accessToken,
   );
 }

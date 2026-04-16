@@ -5,6 +5,7 @@ import type {
   SpotifyTopArtistsResponse,
   SpotifyTopTracksResponse,
 } from "@/lib/spotify-api";
+import { createNowPlayingTrack } from "@/lib/spotify-now-playing";
 import type {
   DashboardData,
   ListeningPeriod,
@@ -48,28 +49,6 @@ function buildArtistImageLookup(response: SpotifyTopArtistsResponse) {
   }
 
   return imageByName;
-}
-
-function buildNowPlayingTrack(
-  currentlyPlaying: SpotifyCurrentlyPlayingResponse | null | undefined,
-): DashboardData["nowPlaying"] {
-  if (!currentlyPlaying || currentlyPlaying.currently_playing_type !== "track") {
-    return undefined;
-  }
-
-  if (!currentlyPlaying.item) {
-    return undefined;
-  }
-
-  return {
-    title: currentlyPlaying.item.name,
-    artist: currentlyPlaying.item.artists.map((artist) => artist.name).join(", "),
-    album: currentlyPlaying.item.album.name,
-    imageUrl: pickImageUrl(currentlyPlaying.item.album.images),
-    isPlaying: currentlyPlaying.is_playing,
-    progressMs: currentlyPlaying.progress_ms,
-    durationMs: currentlyPlaying.item.duration_ms,
-  };
 }
 
 type SpotifyDashboardInput = {
@@ -583,7 +562,7 @@ export function createDashboardDataFromSpotify({
     profileName: displayName,
     profileImageUrl: pickImageUrl(profile.images),
     profileUrl: profile.external_urls?.spotify,
-    nowPlaying: buildNowPlayingTrack(currentlyPlaying),
+    nowPlaying: createNowPlayingTrack(currentlyPlaying),
     reports: [
       buildPeriodReport(
         PERIODS[0],

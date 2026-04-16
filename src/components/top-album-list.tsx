@@ -1,4 +1,5 @@
 import type { TopAlbum } from "@/types/dashboard";
+import { getSpotifyAlbumPageUrl } from "@/lib/spotify-links";
 
 type TopAlbumListProps = {
   albums: TopAlbum[];
@@ -29,7 +30,16 @@ export function TopAlbumList({ albums }: TopAlbumListProps) {
             )}
           </div>
           <div>
-            <h3 className="track-list__title">{album.title}</h3>
+            <h3 className="track-list__title">
+              <a
+                className="track-list__title-link"
+                href={getSpotifyAlbumPageUrl(album.title, album.artist)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {album.title}
+              </a>
+            </h3>
             <p className="track-list__meta">{album.artist}</p>
           </div>
           <div className="track-list__stats">

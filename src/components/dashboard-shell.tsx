@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { TopAlbumList } from "@/components/top-album-list";
 import { TopArtistList } from "@/components/top-artist-list";
 import { TopTrackList } from "@/components/top-track-list";
 import { useDashboardState } from "@/components/use-dashboard-state";
+import { useNowPlaying } from "@/components/use-now-playing";
 import type { DashboardData, ListeningPeriod } from "@/types/dashboard";
 import type { DashboardAuthReason, DashboardAuthState, DashboardSource } from "@/types/dashboard-api";
 
@@ -25,6 +26,30 @@ const PERIOD_LABELS: Record<ListeningPeriod, string> = {
   monthly: "Monthly",
   yearly: "Yearly",
 };
+
+type ReportListType = "tracks" | "artists" | "albums";
+
+const REPORT_LIST_OPTIONS: Array<{
+  key: ReportListType;
+  label: string;
+  title: string;
+}> = [
+  {
+    key: "tracks",
+    label: "Songs",
+    title: "Top 10 Songs",
+  },
+  {
+    key: "artists",
+    label: "Artists",
+    title: "Top 10 Singers",
+  },
+  {
+    key: "albums",
+    label: "Albums",
+    title: "Top 10 Albums",
+  },
+];
 
 function formatPlaybackTimestamp(durationMs: number) {
   const totalSeconds = Math.max(0, Math.floor(durationMs / 1000));
@@ -80,17 +105,36 @@ export function DashboardShell({
   const activeReport = period
     ? state.data.reports.find((report) => report.period === period)
     : null;
+  const [reportListSelection, setReportListSelection] = useState<{
+    period: ListeningPeriod | null;
+    listType: ReportListType;
+  }>({
+    period: period ?? null,
+    listType: "tracks",
+  });
   const isOverview = !period;
   const topTracks = activeReport ? activeReport.topTracks.slice(0, 10) : [];
   const topArtists = activeReport ? activeReport.topArtists.slice(0, 10) : [];
   const topAlbums = activeReport ? activeReport.topAlbums.slice(0, 10) : [];
-  const nowPlaying = state.data.nowPlaying;
+  const supportsLiveNowPlaying =
+    isOverview &&
+    state.spotifyAuthenticated &&
+    state.source === "spotify" &&
+    !requiresReconnect;
+  const nowPlaying = useNowPlaying({
+    enabled: supportsLiveNowPlaying,
+    initialNowPlaying: state.data.nowPlaying,
+  });
   const nowPlayingProgress =
     typeof nowPlaying?.progressMs === "number" && typeof nowPlaying.durationMs === "number"
       ? `${formatPlaybackTimestamp(nowPlaying.progressMs)} / ${formatPlaybackTimestamp(
           nowPlaying.durationMs,
         )}`
       : null;
+  const activeListType =
+    reportListSelection.period === activeReport?.period
+      ? reportListSelection.listType
+      : "tracks";
 
   return (
     <section className="dashboard" aria-label="Spotify reports">
@@ -234,19 +278,45 @@ export function DashboardShell({
                   ))}
                 </section>
 
+                <nav className="dashboard__tabs" aria-label="Choose leaderboard type">
+                  {REPORT_LIST_OPTIONS.map((option) => (
+                    <button
+                      key={option.key}
+                      type="button"
+                      className={`dashboard__tab${
+                        activeListType === option.key ? " dashboard__tab--active" : ""
+                      }`}
+                      onClick={() => {
+                        setReportListSelection({
+                          period: activeReport.period,
+                          listType: option.key,
+                        });
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </nav>
+
                 <section className="report-showcase__lists">
-                  <div className="report-panel report-panel--dark">
-                    <h3 className="dashboard__list-title">Top 10 Songs</h3>
-                    <TopTrackList tracks={topTracks} />
-                  </div>
-                  <div className="report-panel">
-                    <h3 className="dashboard__list-title">Top 10 Singers</h3>
-                    <TopArtistList artists={topArtists} />
-                  </div>
-                  <div className="report-panel report-panel--dark">
-                    <h3 className="dashboard__list-title">Top 10 Albums</h3>
-                    <TopAlbumList albums={topAlbums} />
-                  </div>
+                  {activeListType === "tracks" ? (
+                    <div className="report-panel report-panel--dark">
+                      <h3 className="dashboard__list-title">{REPORT_LIST_OPTIONS[0].title}</h3>
+                      <TopTrackList tracks={topTracks} />
+                    </div>
+                  ) : null}
+                  {activeListType === "artists" ? (
+                    <div className="report-panel">
+                      <h3 className="dashboard__list-title">{REPORT_LIST_OPTIONS[1].title}</h3>
+                      <TopArtistList artists={topArtists} />
+                    </div>
+                  ) : null}
+                  {activeListType === "albums" ? (
+                    <div className="report-panel report-panel--dark">
+                      <h3 className="dashboard__list-title">{REPORT_LIST_OPTIONS[2].title}</h3>
+                      <TopAlbumList albums={topAlbums} />
+                    </div>
+                  ) : null}
                 </section>
               </div>
             </article>

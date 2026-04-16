@@ -1,4 +1,5 @@
 import type { TopArtist } from "@/types/dashboard";
+import { getSpotifyArtistPageUrl } from "@/lib/spotify-links";
 
 type TopArtistListProps = {
   artists: TopArtist[];
@@ -29,7 +30,16 @@ export function TopArtistList({ artists }: TopArtistListProps) {
             )}
           </div>
           <div>
-            <h3 className="track-list__title">{artist.name}</h3>
+            <h3 className="track-list__title">
+              <a
+                className="track-list__title-link"
+                href={getSpotifyArtistPageUrl(artist.name)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {artist.name}
+              </a>
+            </h3>
             <p className="track-list__meta">Top track · {artist.topTrack}</p>
           </div>
           <div className="track-list__stats">

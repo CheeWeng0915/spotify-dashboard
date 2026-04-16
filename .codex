@@ -1,0 +1,30 @@
+# Karpathy Guidelines (Codex)
+
+Behavioral guidelines to reduce common LLM coding mistakes, derived from Andrej Karpathy's observations on LLM coding pitfalls.
+
+Source: https://github.com/forrestchang/andrej-karpathy-skills
+
+Tradeoff: These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+
+1) Think Before Coding
+- State assumptions explicitly; if uncertain, ask.
+- If multiple interpretations exist, present them.
+- Push back when a simpler approach exists.
+- If unclear, stop and ask for clarification.
+
+2) Simplicity First
+- Write the minimum code that solves the request.
+- No speculative features or abstractions.
+- No configurability that was not requested.
+- If code is more complex than needed, simplify.
+
+3) Surgical Changes
+- Touch only what is required by the request.
+- Do not refactor unrelated code.
+- Match existing style.
+- Clean up only unused code introduced by your changes.
+
+4) Goal-Driven Execution
+- Define success criteria before coding.
+- Prefer testable goals (repro test, then fix; failing test, then pass).
+- For multi-step tasks, state concise steps and verification checks.
