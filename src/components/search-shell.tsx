@@ -157,21 +157,28 @@ export function SearchShell(props: SearchShellProps) {
             void searchSpotify();
           }}
         >
-          <input
-            className="feature-input"
-            value={query}
-            placeholder="Search by song, artist, album, or podcast"
-            onChange={(event) => {
-              setQuery(event.target.value);
-            }}
-          />
-          <button
-            className="dashboard__button"
-            type="submit"
-            disabled={!canSearch || isSearching}
-          >
-            {isSearching ? "Searching" : "Search"}
-          </button>
+          <label className="search-controls__prompt" htmlFor="spotify-search-query">
+            Ask Spotify
+          </label>
+          <div className="search-controls__input-shell">
+            <input
+              id="spotify-search-query"
+              className="feature-input search-controls__input"
+              value={query}
+              placeholder="Search by song, artist, album, or podcast"
+              onChange={(event) => {
+                setQuery(event.target.value);
+              }}
+            />
+            <button
+              className="search-controls__submit"
+              type="submit"
+              disabled={!canSearch || isSearching}
+              aria-label={isSearching ? "Searching Spotify" : "Search Spotify"}
+            >
+              {isSearching ? "..." : "↑"}
+            </button>
+          </div>
         </form>
 
         <nav className="dashboard__tabs" aria-label="Search category">

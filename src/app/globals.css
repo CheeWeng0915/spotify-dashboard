@@ -1558,20 +1558,67 @@ button:focus-visible {
 
 .search-controls {
   display: grid;
+  gap: 8px;
+}
+
+.search-controls__prompt {
+  color: var(--text-dim);
+  font-size: 0.84rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.search-controls__input-shell {
+  display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
+  align-items: end;
+  min-height: 56px;
+  padding: 10px 10px 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  background: var(--surface-white);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.search-controls__input-shell:focus-within {
+  border-color: rgba(30, 215, 96, 0.5);
+  box-shadow: 0 0 0 3px rgba(30, 215, 96, 0.2);
 }
 
 .feature-input {
   width: 100%;
-  min-height: 44px;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  background: var(--surface-white);
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--text-strong);
   font: inherit;
   letter-spacing: 0;
+}
+
+.feature-input:focus {
+  outline: none;
+}
+
+.search-controls__submit {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--text-strong);
+  color: var(--surface-white);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.search-controls__submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .result-list,
@@ -1881,12 +1928,18 @@ button:focus-visible {
   background: rgba(255, 255, 255, 0.08);
 }
 
+:root[data-theme="dark"] .search-controls__input-shell,
 :root[data-theme="dark"] .feature-input,
 :root[data-theme="dark"] .result-item__type,
 :root[data-theme="dark"] .organizer-item__badge {
   border-color: rgba(255, 255, 255, 0.16);
   background: #0f141d;
   color: var(--text-strong);
+}
+
+:root[data-theme="dark"] .search-controls__submit {
+  background: #dfffe9;
+  color: #072114;
 }
 
 :root[data-theme="dark"] .report-board__rank {
@@ -2190,10 +2243,6 @@ button:focus-visible {
   .feature-panel,
   .feature-status {
     padding: 18px;
-  }
-
-  .search-controls {
-    grid-template-columns: 1fr;
   }
 
   .result-item,
