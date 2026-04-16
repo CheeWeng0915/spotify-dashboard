@@ -7,6 +7,30 @@ import { getNavItems } from "@/components/liquid-navbar/config";
 import { useDashboardProfileState } from "@/components/use-dashboard-state";
 
 function NavIcon({ label }: { label: string }) {
+  if (label === "Search") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className="site-nav__icon">
+        <path d="M10.5 4a6.5 6.5 0 0 1 5.16 10.46l4.44 4.44-1.4 1.4-4.44-4.44A6.5 6.5 0 1 1 10.5 4Zm0 2a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Z" />
+      </svg>
+    );
+  }
+
+  if (label === "Organizer") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className="site-nav__icon">
+        <path d="M4 6h10v2H4V6Zm0 5h10v2H4v-2Zm0 5h7v2H4v-2Zm12-8.5c0-.48.34-.9.82-.98l3-.5A1 1 0 0 1 21 6v8.5a2.5 2.5 0 1 1-2-2.45V7.18l-1 .17v8.15a2.5 2.5 0 1 1-2-2.45V7.5Z" />
+      </svg>
+    );
+  }
+
+  if (label === "Player") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className="site-nav__icon">
+        <path d="M8 5.14v13.72a1 1 0 0 0 1.53.85l10.97-6.86a1 1 0 0 0 0-1.7L9.53 4.29A1 1 0 0 0 8 5.14Z" />
+      </svg>
+    );
+  }
+
   if (label === "Reports") {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true" className="site-nav__icon">
@@ -115,7 +139,11 @@ export function LiquidNavbar({ spotifyAuthenticated }: LiquidNavbarProps) {
   }
 
   return (
-    <header className="site-nav-wrap">
+    <header
+      className={`site-nav-wrap${
+        spotifyAuthenticated ? " site-nav-wrap--authenticated" : ""
+      }`}
+    >
       <nav className="site-nav" aria-label="Primary">
         <div className="site-nav__inner">
           {spotifyAuthenticated ? (
@@ -164,6 +192,8 @@ export function LiquidNavbar({ spotifyAuthenticated }: LiquidNavbarProps) {
               ) : null}
             </div>
           ) : null}
+
+          <span className="site-nav__mobile-title">Spotify Dashboard</span>
 
           <div className="site-nav__links">
             {navItems.map((item) => {

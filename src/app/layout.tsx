@@ -9,8 +9,8 @@ import {
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Spotify Reports",
-  description: "Apple-style liquid glass Spotify listening reports.",
+  title: "Spotify Dashboard",
+  description: "Spotify catalog search, player, playlist organizer, and listening reports.",
 };
 
 type RootLayoutProps = Readonly<{

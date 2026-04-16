@@ -26,10 +26,29 @@ export type SpotifyRouteSessionResolution =
     }
   | {
       kind: "needs_reauth";
-      reason: "missing_refresh_token" | "token_refresh_failed";
-      clearSession: true;
+      reason: "missing_refresh_token" | "missing_scope" | "token_refresh_failed";
+      clearSession: boolean;
       error: "spotify_reauth_required";
     };
+
+type SpotifyRouteSessionOptions = {
+  requiredScopes?: string[];
+};
+
+function hasRequiredSpotifyScopes(session: SpotifySession, requiredScopes: string[]) {
+  if (requiredScopes.length === 0) {
+    return true;
+  }
+
+  const grantedScopes = new Set(
+    session.scope
+      .split(/\s+/)
+      .map((scope) => scope.trim())
+      .filter(Boolean),
+  );
+
+  return requiredScopes.every((scope) => grantedScopes.has(scope));
+}
 
 export function classifySpotifyRequestError(error: unknown): {
   authState: DashboardAuthState;
@@ -65,7 +84,9 @@ export function classifySpotifyRequestError(error: unknown): {
   };
 }
 
-export async function resolveSpotifyRouteSession(): Promise<SpotifyRouteSessionResolution> {
+export async function resolveSpotifyRouteSession(
+  options: SpotifyRouteSessionOptions = {},
+): Promise<SpotifyRouteSessionResolution> {
   const cookieStore = await cookies();
   const sealedSession = cookieStore.get(SPOTIFY_SESSION_COOKIE)?.value;
   const session = sealedSession ? unsealSpotifySession(sealedSession) : null;
@@ -87,6 +108,15 @@ export async function resolveSpotifyRouteSession(): Promise<SpotifyRouteSessionR
   }
 
   if (!isSpotifySessionExpired(session)) {
+    if (!hasRequiredSpotifyScopes(session, options.requiredScopes ?? [])) {
+      return {
+        kind: "needs_reauth",
+        reason: "missing_scope",
+        clearSession: false,
+        error: "spotify_reauth_required",
+      };
+    }
+
     return {
       kind: "ready",
       session,
@@ -107,7 +137,17 @@ export async function resolveSpotifyRouteSession(): Promise<SpotifyRouteSessionR
       await refreshSpotifyAccessToken(session.refreshToken),
       session.refreshToken,
       session.sessionExpiresAt,
+      session.scope,
     );
+
+    if (!hasRequiredSpotifyScopes(refreshedSession, options.requiredScopes ?? [])) {
+      return {
+        kind: "needs_reauth",
+        reason: "missing_scope",
+        clearSession: false,
+        error: "spotify_reauth_required",
+      };
+    }
 
     return {
       kind: "ready",

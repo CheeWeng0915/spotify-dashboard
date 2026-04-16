@@ -11,7 +11,7 @@ type ConnectPageProps = {
 
 function getSafeNextPath(nextPath: string | undefined) {
   if (!nextPath || !nextPath.startsWith("/") || nextPath.startsWith("//")) {
-    return "/reports/daily";
+    return "/";
   }
 
   return nextPath;

@@ -1,17 +1,17 @@
 import { redirect } from "next/navigation";
-import { SearchShell } from "@/components/search-shell";
+import { OrganizerShell } from "@/components/organizer-shell";
 import { getInitialDashboardShellProps } from "@/lib/dashboard-page";
 
-export default async function HomePage() {
+export default async function OrganizerPage() {
   const initialProps = await getInitialDashboardShellProps();
 
   if (!initialProps.spotifyAuthenticated) {
-    redirect("/connect?next=/");
+    redirect("/connect?next=/organizer");
   }
 
   return (
     <main>
-      <SearchShell
+      <OrganizerShell
         spotifyConfigured={initialProps.spotifyConfigured}
         spotifyAuthenticated={initialProps.spotifyAuthenticated}
         authState={initialProps.authState}

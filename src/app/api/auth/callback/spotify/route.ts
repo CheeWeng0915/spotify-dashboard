@@ -14,7 +14,7 @@ import {
 
 function getSafeRedirectPath(path: string | undefined) {
   if (!path || !path.startsWith("/") || path.startsWith("//")) {
-    return "/reports/daily";
+    return "/";
   }
 
   return path;

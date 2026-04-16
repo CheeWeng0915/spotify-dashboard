@@ -12,6 +12,7 @@ export type DashboardAuthReason =
   | "missing_session"
   | "hard_expired"
   | "missing_refresh_token"
+  | "missing_scope"
   | "token_refresh_failed"
   | "spotify_unauthorized"
   | "spotify_rate_limited"

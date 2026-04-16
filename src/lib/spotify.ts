@@ -10,6 +10,10 @@ const DEFAULT_SCOPES = [
   "user-read-private",
   "user-top-read",
   "user-read-recently-played",
+  "playlist-read-private",
+  "playlist-read-collaborative",
+  "playlist-modify-private",
+  "playlist-modify-public",
 ];
 
 type SpotifyConfigOptions = {

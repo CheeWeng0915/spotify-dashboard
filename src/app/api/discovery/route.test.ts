@@ -142,6 +142,7 @@ describe("/api/discovery", () => {
         items: [
           {
             id: "search-track-1",
+            uri: "spotify:track:search-track-1",
             name: "Search Track",
             duration_ms: 180000,
             popularity: 70,

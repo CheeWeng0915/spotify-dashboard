@@ -145,9 +145,13 @@ export type SpotifySearchTracksResponse = {
   tracks: {
     items: Array<{
       id: string;
+      uri: string;
       name: string;
       duration_ms: number;
       popularity: number;
+      external_urls?: {
+        spotify?: string;
+      };
       album: {
         id?: string;
         name: string;
@@ -159,6 +163,147 @@ export type SpotifySearchTracksResponse = {
       }>;
     }>;
   };
+};
+
+export type SpotifySearchType = "track" | "artist" | "album" | "show" | "episode";
+
+type SpotifyExternalUrls = {
+  spotify?: string;
+};
+
+export type SpotifySearchCatalogResponse = {
+  tracks?: {
+    items: Array<{
+      id: string;
+      uri?: string;
+      name: string;
+      duration_ms: number;
+      external_urls?: SpotifyExternalUrls;
+      album: {
+        id?: string;
+        name: string;
+        images?: SpotifyImage[];
+      };
+      artists: Array<{
+        id?: string;
+        name: string;
+      }>;
+    }>;
+  };
+  artists?: {
+    items: Array<{
+      id: string;
+      uri?: string;
+      name: string;
+      images?: SpotifyImage[];
+      external_urls?: SpotifyExternalUrls;
+    }>;
+  };
+  albums?: {
+    items: Array<{
+      id: string;
+      uri?: string;
+      name: string;
+      images?: SpotifyImage[];
+      external_urls?: SpotifyExternalUrls;
+      artists: Array<{
+        id?: string;
+        name: string;
+      }>;
+      release_date?: string;
+    }>;
+  };
+  shows?: {
+    items: Array<{
+      id: string;
+      uri?: string;
+      name: string;
+      publisher?: string;
+      images?: SpotifyImage[];
+      external_urls?: SpotifyExternalUrls;
+      total_episodes?: number;
+    }>;
+  };
+  episodes?: {
+    items: Array<{
+      id: string;
+      uri?: string;
+      name: string;
+      description?: string;
+      duration_ms?: number;
+      images?: SpotifyImage[];
+      external_urls?: SpotifyExternalUrls;
+      show?: {
+        name?: string;
+        publisher?: string;
+      };
+    }>;
+  };
+};
+
+export type SpotifyPlaylistSummaryItem = {
+  id: string;
+  name: string;
+  uri: string;
+  snapshot_id?: string;
+  collaborative?: boolean;
+  public?: boolean | null;
+  images?: SpotifyImage[];
+  external_urls?: SpotifyExternalUrls;
+  owner?: {
+    id?: string;
+    display_name?: string | null;
+  };
+  tracks?: {
+    total: number;
+  };
+};
+
+export type SpotifyPlaylistItemsMutationResponse = {
+  snapshot_id: string;
+};
+
+export type SpotifyCurrentUserPlaylistsResponse = {
+  items: SpotifyPlaylistSummaryItem[];
+  next?: string | null;
+  total?: number;
+};
+
+export type SpotifyPlaylistDetailsResponse = SpotifyPlaylistSummaryItem;
+
+export type SpotifyPlaylistItemObject = {
+  id?: string | null;
+  uri?: string | null;
+  type?: string;
+  name?: string;
+  duration_ms?: number | null;
+  is_local?: boolean;
+  external_urls?: SpotifyExternalUrls;
+  album?: {
+    id?: string;
+    name: string;
+    images?: SpotifyImage[];
+  };
+  artists?: Array<{
+    id?: string;
+    name: string;
+  }>;
+  images?: SpotifyImage[];
+  show?: {
+    id?: string;
+    name?: string;
+    publisher?: string;
+    images?: SpotifyImage[];
+  };
+};
+
+export type SpotifyPlaylistItemsResponse = {
+  items: Array<{
+    added_at?: string | null;
+    track: SpotifyPlaylistItemObject | null;
+  }>;
+  next?: string | null;
+  total?: number;
 };
 
 export type SpotifyTimeRange = "short_term" | "medium_term" | "long_term";
@@ -390,4 +535,120 @@ export function searchSpotifyTracks(
     `/search?${query.toString()}`,
     accessToken,
   );
+}
+
+export function searchSpotifyCatalog(
+  accessToken: string,
+  queryText: string,
+  types: SpotifySearchType[],
+  options: {
+    limit?: number;
+    market?: string;
+  } = {},
+) {
+  const query = new URLSearchParams({
+    q: queryText,
+    type: Array.from(new Set(types)).join(","),
+    limit: String(Math.max(1, Math.min(options.limit ?? 10, 50))),
+  });
+
+  if (options.market) {
+    query.set("market", options.market);
+  }
+
+  return spotifyFetch<SpotifySearchCatalogResponse>(
+    `/search?${query.toString()}`,
+    accessToken,
+  );
+}
+
+export function getCurrentUserPlaylists(
+  accessToken: string,
+  options: {
+    limit?: number;
+    offset?: number;
+  } = {},
+) {
+  const query = new URLSearchParams({
+    limit: String(Math.max(1, Math.min(options.limit ?? 50, 50))),
+    offset: String(Math.max(0, Math.floor(options.offset ?? 0))),
+  });
+
+  return spotifyFetch<SpotifyCurrentUserPlaylistsResponse>(
+    `/me/playlists?${query.toString()}`,
+    accessToken,
+  );
+}
+
+export function getSpotifyPlaylist(accessToken: string, playlistId: string) {
+  return spotifyFetch<SpotifyPlaylistDetailsResponse>(
+    `/playlists/${encodeURIComponent(playlistId)}`,
+    accessToken,
+  );
+}
+
+export function getSpotifyPlaylistItems(
+  accessToken: string,
+  playlistId: string,
+  options: {
+    limit?: number;
+    offset?: number;
+  } = {},
+) {
+  const query = new URLSearchParams({
+    limit: String(Math.max(1, Math.min(options.limit ?? 50, 50))),
+    offset: String(Math.max(0, Math.floor(options.offset ?? 0))),
+  });
+
+  return spotifyFetch<SpotifyPlaylistItemsResponse>(
+    `/playlists/${encodeURIComponent(playlistId)}/tracks?${query.toString()}`,
+    accessToken,
+  );
+}
+
+export function addItemsToSpotifyPlaylist(
+  accessToken: string,
+  playlistId: string,
+  uris: string[],
+) {
+  return spotifyFetch<SpotifyPlaylistItemsMutationResponse>(
+    `/playlists/${encodeURIComponent(playlistId)}/tracks`,
+    accessToken,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ uris }),
+    },
+  );
+}
+
+export async function replaceSpotifyPlaylistItems(
+  accessToken: string,
+  playlistId: string,
+  uris: string[],
+) {
+  const firstBatch = uris.slice(0, 100);
+  let mutation = await spotifyFetch<SpotifyPlaylistItemsMutationResponse>(
+    `/playlists/${encodeURIComponent(playlistId)}/tracks`,
+    accessToken,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ uris: firstBatch }),
+    },
+  );
+
+  for (let index = 100; index < uris.length; index += 100) {
+    mutation = await addItemsToSpotifyPlaylist(
+      accessToken,
+      playlistId,
+      uris.slice(index, index + 100),
+    );
+  }
+
+  return mutation;
 }

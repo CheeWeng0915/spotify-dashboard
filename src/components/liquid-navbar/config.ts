@@ -18,8 +18,18 @@ export function getNavItems(spotifyAuthenticated: boolean): NavbarItem[] {
   const items: NavbarItem[] = [
     {
       href: "/",
-      label: "Dashboard",
+      label: "Search",
       isActive: (pathname: string) => pathname === "/",
+    },
+    {
+      href: "/organizer",
+      label: "Organizer",
+      isActive: (pathname: string) => pathname.startsWith("/organizer"),
+    },
+    {
+      href: "/dashboard",
+      label: "Player",
+      isActive: (pathname: string) => pathname.startsWith("/dashboard"),
     },
     {
       href: "/reports/daily",
