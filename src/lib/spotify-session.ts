@@ -41,6 +41,7 @@ export function createSpotifySession(
   token: SpotifyTokenLike,
   previousRefreshToken?: string,
   sessionExpiresAt?: number,
+  previousScope?: string,
 ): SpotifySession {
   const now = Date.now();
 
@@ -48,7 +49,7 @@ export function createSpotifySession(
     accessToken: token.access_token,
     refreshToken: token.refresh_token ?? previousRefreshToken,
     tokenType: token.token_type,
-    scope: token.scope ?? "",
+    scope: token.scope ?? previousScope ?? "",
     expiresAt: now + Math.max(token.expires_in - 60, 0) * 1000,
     sessionExpiresAt:
       sessionExpiresAt ?? now + SPOTIFY_SESSION_COOKIE_MAX_AGE * 1000,

@@ -231,6 +231,7 @@ export async function GET() {
         await refreshSpotifyAccessToken(session.refreshToken),
         session.refreshToken,
         session.sessionExpiresAt,
+        session.scope,
       );
       refreshedSession = activeSession;
     } catch (error) {
