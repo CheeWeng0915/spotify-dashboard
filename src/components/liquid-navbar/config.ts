@@ -22,6 +22,16 @@ export function getNavItems(spotifyAuthenticated: boolean): NavbarItem[] {
       isActive: (pathname: string) => pathname === "/",
     },
     {
+      href: "/library",
+      label: "Library",
+      isActive: (pathname: string) => pathname.startsWith("/library"),
+    },
+    {
+      href: "/reports/daily",
+      label: "Reports",
+      isActive: (pathname: string) => pathname.startsWith("/reports/"),
+    },
+    {
       href: "/organizer",
       label: "Organizer",
       isActive: (pathname: string) => pathname.startsWith("/organizer"),
@@ -30,11 +40,6 @@ export function getNavItems(spotifyAuthenticated: boolean): NavbarItem[] {
       href: "/dashboard",
       label: "Player",
       isActive: (pathname: string) => pathname.startsWith("/dashboard"),
-    },
-    {
-      href: "/reports/daily",
-      label: "Reports",
-      isActive: (pathname: string) => pathname.startsWith("/reports/"),
     },
     {
       href: "/discover",

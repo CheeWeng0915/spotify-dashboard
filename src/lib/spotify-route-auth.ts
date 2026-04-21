@@ -61,7 +61,7 @@ export function classifySpotifyRequestError(error: unknown): {
       return {
         authState: "needs_reauth",
         reason: "spotify_unauthorized",
-        clearSession: true,
+        clearSession: false,
         error: "spotify_unauthorized",
       };
     }

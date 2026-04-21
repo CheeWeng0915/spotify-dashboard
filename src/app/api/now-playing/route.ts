@@ -58,7 +58,7 @@ export async function GET() {
         error: sessionResolution.error,
       },
       {
-        clearSession: true,
+        clearSession: sessionResolution.clearSession,
       },
     );
   }

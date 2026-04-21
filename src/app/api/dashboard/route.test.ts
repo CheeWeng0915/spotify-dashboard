@@ -243,7 +243,7 @@ describe("/api/dashboard", () => {
     expect(body.reason).toBe("spotify_unauthorized");
     expect(body.error).toBe("spotify_unauthorized");
     expect(body.spotifyAuthenticated).toBe(false);
-    expect(response.headers.get("set-cookie")).toContain(`${SPOTIFY_SESSION_COOKIE}=;`);
+    expect(response.headers.get("set-cookie")).toBeNull();
   });
 
   it("returns transient_error when Spotify is rate limited", async () => {
