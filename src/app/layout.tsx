@@ -43,7 +43,7 @@ async function LayoutContent({ cookieStorePromise, children }: LayoutContentProp
   return (
     <div className="app-shell">
       <LiquidNavbar spotifyAuthenticated={spotifyAuthenticated} />
-      {children}
+      <div className="app-shell__content">{children}</div>
     </div>
   );
 }

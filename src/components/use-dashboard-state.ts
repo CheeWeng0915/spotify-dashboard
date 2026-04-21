@@ -145,19 +145,6 @@ export function useDashboardState({
           fetchError: Boolean(payload.error),
         });
 
-        if (requireSpotifyConnection && payload.authState === "needs_reauth") {
-          const nextPath = `${window.location.pathname}${window.location.search}`;
-          const connectUrl = new URL("/connect", window.location.origin);
-
-          connectUrl.searchParams.set("next", nextPath || "/");
-          connectUrl.searchParams.set("spotify", "error");
-
-          if (payload.reason) {
-            connectUrl.searchParams.set("reason", payload.reason);
-          }
-
-          window.location.replace(connectUrl.toString());
-        }
       } catch {
         if (!active) {
           return;
